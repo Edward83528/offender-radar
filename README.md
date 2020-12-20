@@ -4,11 +4,11 @@
 
 專案目前分成5個 目錄夾：
 
-core：共用函式庫。
-model：提供bert深度學習模型。
-static：靜態資源存放。
-task：排程的程式。
-templates：存放網頁模板。
+1. core：共用函式庫。
+2. model：提供bert深度學習模型。
+3. static：靜態資源存放。
+4. task：排程的程式。
+5. templates：存放網頁模板。
 
 ### 後端主要使用的組件
 
