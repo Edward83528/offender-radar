@@ -11,6 +11,8 @@ import requests
 import random
 from bs4 import BeautifulSoup as bs
 from urllib.parse import quote
+import pymssql
+from core.core import insertNews
 
 keyword = quote('犯罪')
 start_date = '2020-12-01'
@@ -58,15 +60,15 @@ def parseLtnNews(uri):
         for span_soup in ul_soup.findAll('span'):
             pd = span_soup.string.replace("&nbsp;","")[:10]
             postdate.append(pd)
-        for a_soup in ul_soup.findAll('a',attrs={"class":"ph"}):
-            tmp_body = ''
+        for a_soup in ul_soup.findAll('a',attrs={"class":"tit"}):
             tle = a_soup.getText()
-            lnk = 'http://news.ltn.com.tw/'+a_soup.get('href')
+            lnk = a_soup.get('href')
             print(lnk)
             title.append(tle.strip())
             link.append(lnk)
             html_data = request_uri(lnk)
         for newslistul_soup in ul_soup.findAll('div',attrs={"class":"cont"}):
+            tmp_body = ''
             for p_soup in newslistul_soup.findAll('p'):
                 tmp_body += p_soup.getText()
             body.append(tmp_body)
@@ -92,5 +94,7 @@ if __name__ == '__main__':
     file = codecs.open(urllib.parse.unquote(keyword)+'.json', 'w', encoding='utf-8')
     file.write(row_json)
     file.close()
+    
+    insertNews(items)
   
     print("Done")
