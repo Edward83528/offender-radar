@@ -49,7 +49,6 @@ def request_uri(uri):
 
 def parseLtnNews(uri):
     html_data =  request_uri(uri)
-    print(html_data)
     soup = bs(html_data,'html.parser')
     postdate = []
     link = []
@@ -67,13 +66,11 @@ def parseLtnNews(uri):
             title.append(tle.strip())
             link.append(lnk)
             html_data = request_uri(lnk)
-            soup2 = bs(html_data,'html.parser')
-            for newslistul_soup in soup2.findAll('div',attrs={"class":"cont"}):
-                for p_soup in newslistul_soup.findAll('p'):
-                    tmp_body += p_soup.getText()
+        for newslistul_soup in ul_soup.findAll('div',attrs={"class":"cont"}):
+            for p_soup in newslistul_soup.findAll('p'):
+                tmp_body += p_soup.getText()
             body.append(tmp_body)
-                    #items.append({"uri":uri,"p_soup":str(p_soup),"updatetime":datetime.datetime.now().strftime('%Y-%m-%d')})
-                    #print({"uri":uri,"p_soup":str(p_soup),"updatetime":datetime.datetime.now().strftime('%Y-%m-%d')})
+            
     current = 0
     while current < len(postdate):
         print(title[current])
