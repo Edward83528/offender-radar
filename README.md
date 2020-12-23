@@ -3,7 +3,7 @@
 使用python為開發語言，Database 為 Sql Server 2012 以上，以 Flask 為應用程式開發基礎框架。
 
 主要概念為兩項功能:
-1. 輸入犯罪文章 > 輸出犯罪關係人 ( 不是犯罪文章 > 輸出空集合 )
+1. 輸入犯罪文章 > 輸出犯罪關係人 ( 輸入不是犯罪文章 > 輸出空集合 )
 2. 輸入犯罪人 > 輸出犯罪關係圖
 
 專案目前分成5個 目錄夾：
@@ -21,10 +21,10 @@
 
 以現代的瀏覽器為主， IE11以下不考慮支援
 
-1. [jQuery 3](https://jquery.com/)，
-2. [Lodash](https://lodash.com/)，
+1. [jQuery 3](https://jquery.com/)
+2. [Lodash](https://lodash.com/)
 3. [Parsley](https://parsleyjs.org/) client form validate
-5. [Datatables](https://datatables.net/)。
+5. [Datatables](https://datatables.net/)
 
 ### 管理後台的樣式
 
