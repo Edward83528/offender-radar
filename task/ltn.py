@@ -11,13 +11,12 @@ import requests
 import random
 from bs4 import BeautifulSoup as bs
 from urllib.parse import quote
-import pymssql
 from core.core import insertNews
 
 keyword = quote('犯罪')
-start_date = '2020-12-01'
-end_date = '2020-12-20'
-pages = '1'
+start_date = datetime.datetime.now().strftime('%Y-%m-%d')
+end_date = datetime.datetime.now().strftime('%Y-%m-%d')
+pages = '3'
 
 
 def start_requests():
@@ -31,10 +30,10 @@ def start_requests():
         urls = []
         for i in range(1,int(pages)+1):
             str_idx = ''+('%s' % i)
-            urls.append('http://news.ltn.com.tw/search?keyword='+keyword+'&conditions=and&SYear='+SYear+'&SMonth='+SMonth+'&SDay='+SDay+'&EYear='+EYear+'&EMonth='+EMonth+'&EDay='+EDay+'&page='+str_idx+'')
+            urls.append('http://search.ltn.com.tw/list?keyword='+keyword+'&type=all&sort=date&start_time='+SYear+SMonth+SDay+'&end_time='+EYear+EMonth+EDay+'&page='+str_idx+'')
 
         for url in urls:
-            print (url)
+            print ('url:',url)
             parseLtnNews(url)
             time.sleep(0.5)
     else:
@@ -90,11 +89,11 @@ def parseLtnNews(uri):
 if __name__ == '__main__':
     items = []
     start_requests();
-    row_json = json.dumps(items, ensure_ascii=False)
-    file = codecs.open(urllib.parse.unquote(keyword)+'.json', 'w', encoding='utf-8')
-    file.write(row_json)
-    file.close()
+    #row_json = json.dumps(items, ensure_ascii=False)
+    #file = codecs.open(urllib.parse.unquote(keyword)+'.json', 'w', encoding='utf-8')
+    #file.write(row_json)
+    #file.close()
     
-    insertNews(items)
+    insertNews(items,True)
   
     print("Done")

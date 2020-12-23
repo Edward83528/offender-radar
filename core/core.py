@@ -19,20 +19,23 @@ def getCursor(conn):
     cursor = conn.cursor()   
     return cursor
 
-def insertNews(items):
-    conn = pymssql.connect(server, user, password, database)
-    cursor=getCursor(conn)
-    counts=0
-    for item in items:
-        title=item['title']
-        link=item['link']
-        body=item['body']
-        postdate=item['postdate']
-        updatetime=item['updatetime']
-        count=cursor.execute("INSERT INTO News(title,link,[content],postdate,updatetime) VALUES ('"+title+"', '"+link+"', '"+body+"','"+postdate+"','"+updatetime+"')")
-        # 如果沒有指定autocommit屬性為True的話就需要呼叫commit()方法
-        conn.commit()
-    cursor.close()
-    conn.close()
-
-    return counts;
+def insertNews(items,isCriminal):
+    try:
+        conn = pymssql.connect(server, user, password, database)
+        cursor=getCursor(conn)
+    
+        for item in items:
+            title=item['title']
+            link=item['link']
+            body=item['body']
+            postdate=item['postdate']
+            updatetime=item['updatetime']
+            criminal=str(isCriminal);
+            cursor.execute("INSERT INTO News(title,link,[content],criminal,postdate,updatetime) VALUES ('"+title+"', '"+link+"', '"+body+"','"+criminal+"',' "+postdate+"','"+updatetime+"')")
+            conn.commit()
+    
+        cursor.close()
+        conn.close()
+        return True;
+    except:
+        return False;
