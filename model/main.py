@@ -7,14 +7,12 @@ from torch.utils.data import DataLoader, TensorDataset
 from IPython.display import clear_output
 import torch.nn.functional as F # 激勵函數
 
-app = Flask(__name__)
-
 def fillZero( tokens , max_len ) :  
   while len(tokens)<max_len:
     tokens.append(0)
   return tokens
 
-def ToBertFormat( input_content , input_label , input_max_seq_len) :
+def ToBertFormat(tokenizer , input_content , input_label , input_max_seq_len) :
   # From makeDataset : TensorDataset(all_input_ids, all_input_segment_ids, all_input_masks, all_answer_lables)
   selLen = -1 
   # [0] : id
@@ -42,17 +40,27 @@ def makeDataset(data_feature):
 
     return dataset
 
-@app.route("/")
-def hello():
-    return "Hello World!"
 
-@app.route("/PreditIsCrime" , methods=['GET','POST'])
-def PreditIsCrime():
-    content = request.json
+    cursor = conn.cursor()   
+    return cursor
+
+def getCrimeFlag(content):
+    
+     # 取得此預訓練模型所使用的 tokenizer
+    PRETRAINED_MODEL_NAME = "bert-base-chinese"  # 指定繁簡中文 BERT-BASE 預訓練模型
+    tokenizer = BertTokenizer.from_pretrained(PRETRAINED_MODEL_NAME)
+    
+    device = torch.device("cuda")
+    bert_config, bert_class, bert_tokenizer = (BertConfig, BertForSequenceClassification, BertTokenizer)
+    config_LayerOne = bert_config.from_pretrained('model/trained_iot_v2_model/config.json')
+    model_LayerOne = bert_class.from_pretrained('model/trained_iot_v2_model/pytorch_model.bin', from_tf=bool('.ckpt' in 'bert-base-chinese'), config=config_LayerOne )
+    model_LayerOne.to(device)
+    model_LayerOne.eval()   
+    
     testStr = content['NewsContext']
     # testStr = "跨境洗錢集團總裁落跑！身家百億擁海陸空頂級交通工具"
     testStrLen = len(tokenizer.build_inputs_with_special_tokens(tokenizer.convert_tokens_to_ids(tokenizer.tokenize(testStr))))
-    testStr_contentId , testStr_seqmentId , testStr_maskId , testStr_labelId = ToBertFormat( testStr , 0 , testStrLen )
+    testStr_contentId , testStr_seqmentId , testStr_maskId , testStr_labelId = ToBertFormat( tokenizer ,testStr , 0 , testStrLen )
 
     data_content_ids = [] 
     data_segment_ids =[]
@@ -92,21 +100,3 @@ def PreditIsCrime():
         "testStr_maskId":testStr_maskId,
         "testStr_labelId":testStr_labelId
     } )
-
-
-if __name__ == '__main__' :
-    
-    # 取得此預訓練模型所使用的 tokenizer
-    PRETRAINED_MODEL_NAME = "bert-base-chinese"  # 指定繁簡中文 BERT-BASE 預訓練模型
-    tokenizer = BertTokenizer.from_pretrained(PRETRAINED_MODEL_NAME)
-    
-    device = torch.device("cuda")
-    bert_config, bert_class, bert_tokenizer = (BertConfig, BertForSequenceClassification, BertTokenizer)
-    config_LayerOne = bert_config.from_pretrained('trained_iot_v2_model/config.json')
-    model_LayerOne = bert_class.from_pretrained('trained_iot_v2_model/pytorch_model.bin', from_tf=bool('.ckpt' in 'bert-base-chinese'), config=config_LayerOne )
-    model_LayerOne.to(device)
-    model_LayerOne.eval()
-
-
-    app.debug = False
-    app.run(host='0.0.0.0', port=8787)

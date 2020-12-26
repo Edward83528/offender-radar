@@ -1,3 +1,5 @@
 flask
 matplotlib
 pymssql
+torch
+transformers
