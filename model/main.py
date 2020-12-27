@@ -6,6 +6,10 @@ from transformers import BertConfig, BertTokenizer, BertForSequenceClassificatio
 from torch.utils.data import DataLoader, TensorDataset
 from IPython.display import clear_output
 import torch.nn.functional as F # 激勵函數
+import configparser #讀取設定檔
+from app import config
+
+model_path=config['Model']['path']
 
 def fillZero( tokens , max_len ) :  
   while len(tokens)<max_len:
@@ -52,8 +56,8 @@ def getCrimeFlag(content):
     
     device = torch.device("cuda")
     bert_config, bert_class, bert_tokenizer = (BertConfig, BertForSequenceClassification, BertTokenizer)
-    config_LayerOne = bert_config.from_pretrained('model/trained_iot_v2_model/config.json')
-    model_LayerOne = bert_class.from_pretrained('model/trained_iot_v2_model/pytorch_model.bin', from_tf=bool('.ckpt' in 'bert-base-chinese'), config=config_LayerOne )
+    config_LayerOne = bert_config.from_pretrained(model_path+'config.json')
+    model_LayerOne = bert_class.from_pretrained(model_path+'pytorch_model.bin', from_tf=bool('.ckpt' in 'bert-base-chinese'), config=config_LayerOne )
     model_LayerOne.to(device)
     model_LayerOne.eval()   
     

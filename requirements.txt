@@ -3,3 +3,4 @@ matplotlib
 pymssql
 torch
 transformers
+snownlp

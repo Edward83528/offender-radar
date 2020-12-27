@@ -5,3 +5,4 @@ model/trained_iot_v1_model/
 model/trained_iot_v2_model/
 *.json
 *.bin
+core/data/
