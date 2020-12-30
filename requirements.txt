@@ -1,4 +1,5 @@
 flask
+tensorflow
 matplotlib
 pymssql
 torch
