@@ -3,11 +3,15 @@
 API集
 @author: Zhong-wei
 """
+import configparser # 讀取設定檔
 import pymssql
 from snownlp import SnowNLP
 from ckiptagger import data_utils, construct_dictionary, WS, POS, NER
-from app import config, ws, pos, ner
+global config, ws, pos, ner
 
+config = configparser.ConfigParser()    
+config.read('config.ini')
+    
 server=config['Pymssqlsql']['server']
 database=config['Pymssqlsql']['database']
 user=config['Pymssqlsql']['user']

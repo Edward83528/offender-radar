@@ -7,8 +7,9 @@ from torch.utils.data import DataLoader, TensorDataset
 from IPython.display import clear_output
 import torch.nn.functional as F # 激勵函數
 import configparser #讀取設定檔
-from app import config
 
+config = configparser.ConfigParser()    
+config.read('config.ini')
 model_path=config['Model']['path']
 
 def fillZero( tokens , max_len ) :  
