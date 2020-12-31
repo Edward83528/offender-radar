@@ -49,7 +49,7 @@ def makeDataset(data_feature):
     cursor = conn.cursor()   
     return cursor
 
-def getCrimeFlag(content):
+def getCrimeFlag(testStr):
     
      # 取得此預訓練模型所使用的 tokenizer
     PRETRAINED_MODEL_NAME = "bert-base-chinese"  # 指定繁簡中文 BERT-BASE 預訓練模型
@@ -62,7 +62,6 @@ def getCrimeFlag(content):
     model_LayerOne.to(device)
     model_LayerOne.eval()   
     
-    testStr = content['NewsContext']
     # testStr = "跨境洗錢集團總裁落跑！身家百億擁海陸空頂級交通工具"
     testStrLen = len(tokenizer.build_inputs_with_special_tokens(tokenizer.convert_tokens_to_ids(tokenizer.tokenize(testStr))))
     testStr_contentId , testStr_seqmentId , testStr_maskId , testStr_labelId = ToBertFormat( tokenizer ,testStr , 0 , testStrLen )

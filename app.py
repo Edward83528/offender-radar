@@ -17,9 +17,22 @@ def index():
 
 # 犯罪分類API
 @app.route("/PreditIsCrime" , methods=['POST'])
-def PreditIsCrime():
+def preditIsCrime():
     content = request.json
-    return m.getCrimeFlag(content)
+    inputold = content['NewsContext']
+    return m.getCrimeFlag(inputold)
+
+# 犯罪分類API
+@app.route("/PreditCrimePeoples" , methods=['POST'])
+def preditCrimePeoples():
+    content = request.json
+    inputold = content['NewsContext']
+    return_json=m.getCrimeFlag(inputold)
+    flag=return_json['ResRedict']
+    if flag=='1':
+        return c.get_person_str(ws,pos,ner,inputold)
+    else:
+        return '[]'
     
 if __name__ == "__main__":
     
