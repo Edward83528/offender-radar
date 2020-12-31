@@ -4,7 +4,7 @@ from flask import render_template
 import os
 import model.main as m
 import core.core as c
-
+import torch
 # 創建一個falsk對象(建立類別實體app)
 app = Flask(__name__)
 
@@ -35,7 +35,8 @@ def preditCrimePeoples():
         return '[]'
     
 if __name__ == "__main__":
-    
+
+    print(torch.__version__)  #注意是双下划线
     print('載入ckip資源,這將會花一點時間')
     ws, pos, ner = c.load_data()
     
