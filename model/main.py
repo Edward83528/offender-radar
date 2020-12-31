@@ -6,7 +6,7 @@ from transformers import BertConfig, BertTokenizer, BertForSequenceClassificatio
 from torch.utils.data import DataLoader, TensorDataset
 from IPython.display import clear_output
 import torch.nn.functional as F # 激勵函數
-import configparser #讀取設定檔
+import configparser # 讀取設定檔
 
 config = configparser.ConfigParser()    
 config.read('config.ini')

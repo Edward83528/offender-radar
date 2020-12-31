@@ -7,9 +7,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description" content="">
-    <meta name="author" content="">
-
-    <title>犯罪雷達控制台</title>
+    <title>犯罪雷達</title>
     <link href="../static/css/style.css" rel="stylesheet" type="text/css">
 
     <!-- Custom fonts for this template-->
@@ -18,10 +16,599 @@
 
     <!-- Custom styles for this template-->
     <link href="../static/css/sb-admin-2.min.css" rel="stylesheet">
-
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
 </head>
 
 <body id="page-top">
+    <script>
+        $(document).ready(function() {
+            showChart();
+        })
+
+        function showChart() {
+            var data = {
+                "links": [{
+                        "source": "王大明",
+                        "target": "阿福",
+                        "relation": "被害者",
+                        "sourceColor": "#F4793B",
+                        "targetColor": "red",
+                        "sourceRadius": "70",
+                        "targetRadius": "50",
+                    },
+                    {
+                        "source": "王大明",
+                        "target": "王小明",
+                        "relation": "兄弟",
+                        "sourceColor": "#F4793B",
+                        "targetColor": "#0084ff",
+                        "sourceRadius": "60",
+                        "targetRadius": "50",
+                    },
+                ]
+            };
+            var options = {};
+            options.backgroundColor = "#eee";
+            options.nodesFontType = "SimHei";
+            options.nodesFontSize = 30;
+            options.lineFontType = "SimHei";
+            options.lineFontSize = 24;
+            options.lineColor = "#000000";
+            options.showExamples = true;
+            options.examplesX = 100;
+            options.examplesY = 300;
+            options.examplesFontColor = "#000000";
+            drawChart("divid", options, data);
+        }
+
+
+        function drawChart(divid, options, datas, dataFilter) {
+            var backgroundColor = options.backgroundColor; //背景颜色
+            var nodesFontType = options.nodesFontType; //节点字体
+            var nodesFontSize = options.nodesFontSize; //节点字号
+            var lineFontType = options.lineFontType; //关系字体
+            var lineFontSize = options.lineFontSize; //关系字号
+            var lineColor = options.lineColor; //连线颜色
+            var examplesFontColor = options.examplesFontColor; //关系示例字体颜色
+
+            var width = 600; //画布宽
+            var height = 400; //画布高
+            var svgChart = d3.select("svg");
+            svgChart.remove();
+
+            var tip = $(".tooltip");
+            if (tip.length > 0) {
+                tip.remove();
+            }
+
+            var sourceDatas = {};
+            sourceDatas.links = [];
+            for (var i = 0; i < datas.links.length; i++) {
+                var jsonObj = {};
+                jsonObj.source = datas.links[i].source;
+                jsonObj.target = datas.links[i].target;
+                jsonObj.relation = datas.links[i].relation;
+                jsonObj.sourceImg = datas.links[i].sourceImg;
+                jsonObj.targetImg = datas.links[i].targetImg;
+                jsonObj.sourceColor = datas.links[i].sourceColor;
+                jsonObj.targetColor = datas.links[i].targetColor;
+                jsonObj.sourceRadius = datas.links[i].sourceRadius;
+                jsonObj.targetRadius = datas.links[i].targetRadius;
+                jsonObj.lineColor = '#458B00';
+
+                jsonObj.data = datas.links[i].data;
+                sourceDatas.links.push(jsonObj);
+            }
+            var resourceLinks = sourceDatas.links;
+
+
+            if (dataFilter != undefined && dataFilter.length > 0) {
+                var indexArray = [];
+                for (var i = 0; i < dataFilter.length; i++) {
+                    for (var j = 0; j < resourceLinks.length; j++) {
+                        if (resourceLinks[j].relation == dataFilter[i].relation && dataFilter[i].isShow == "false") {
+                            indexArray.push(j);
+                        }
+                    }
+                }
+                if (indexArray.length > 0) {
+                    var tempArray = [];
+                    for (var j = 0; j < resourceLinks.length; j++) {
+                        for (var i = 0; i < indexArray.length; i++) {
+                            if (indexArray[i] != j) {
+                                if (i == indexArray.length - 1) {
+                                    tempArray.push(resourceLinks[j]);
+                                    break;
+                                }
+                                continue;
+                            } else {
+                                break;
+                            }
+
+                        }
+                    }
+                    resourceLinks = tempArray;
+                }
+            }
+            var links = resourceLinks;
+
+            //关系分组  
+            var linkGroup = {};
+            //对连接线进行统计和分组，不区分连接线的方向，只要属于同两个实体，即认为是同一组  
+            var linkmap = {};
+            for (var i = 0; i < links.length; i++) {
+                var key = links[i].source < links[i].target ? links[i].source + ':' + links[i].target : links[i]
+                    .target + ':' + links[i].source;
+                if (!linkmap.hasOwnProperty(key)) {
+                    linkmap[key] = 0;
+                }
+                linkmap[key] += 1;
+                if (!linkGroup.hasOwnProperty(key)) {
+                    linkGroup[key] = [];
+                }
+                linkGroup[key].push(links[i]);
+            }
+            //为每一条连接线分配size属性，同时对每一组连接线进行编号  
+            for (var i = 0; i < links.length; i++) {
+                var key = links[i].source < links[i].target ? links[i].source + ':' + links[i].target : links[i]
+                    .target + ':' + links[i].source;
+                links[i].size = linkmap[key];
+                //同一组的关系进行编号  
+                var group = linkGroup[key];
+                //给节点分配编号  
+                setLinkNumber(group);
+            }
+
+            //节点
+            var nodes = {};
+            //关系对应颜色
+            var relationColor = {};
+
+            for (var i = 0; i < links.length; i++) {
+                links[i].source = nodes[links[i].source] || (nodes[links[i].source] = {
+                    name: links[i].source,
+                    color: links[i].sourceColor,
+                    image: links[i].sourceImg,
+                    radius: links[i].sourceRadius
+                });
+                links[i].target = nodes[links[i].target] || (nodes[links[i].target] = {
+                    name: links[i].target,
+                    color: links[i].targetColor,
+                    image: links[i].targetImg,
+                    radius: links[i].targetRadius
+                });
+            }
+
+            var sourceData = datas.links;
+            for (var i = 0; i < sourceData.length; i++) {
+                relationColor[sourceData[i].relation] = {
+                    "relation": sourceData[i].relation,
+                    "lineColor": sourceData[i].lineColor
+                };
+            }
+
+
+            nodes = d3.values(nodes);
+            relationColor = d3.values(relationColor);
+
+            var examples_x = parseFloat(options.examplesX); //关系示例坐标x
+            var examples_y = parseFloat(options.examplesY); //关系示例坐标y
+            var examplesLength = 80;
+            var examplesSize = Math.floor((width - examples_x) / examplesLength);
+            var examplesRow = relationColor.length % examplesSize == 0 ? relationColor.length / examplesSize : Math
+                .ceil(relationColor.length / examplesSize);
+            //计算关系示列位置
+            for (var i = 1; i <= relationColor.length; i++) {
+                var num = i % examplesSize == 0 ? examplesSize : i % examplesSize;
+                relationColor[i - 1].x = examples_x + (num - 1) * examplesLength;
+                relationColor[i - 1].y = examples_y + 20 * Math.ceil(i / examplesSize);
+            }
+            if (dataFilter == undefined) {
+                dataFilter = [];
+                for (var i = 0; i < relationColor.length; i++) {
+                    dataFilter.push({
+                        "relation": relationColor[i].relation,
+                        "isShow": "true"
+                    });
+                }
+            }
+
+
+            //绑定相连节点
+            for (var i = 0; i < nodes.length; i++) {
+                for (var j = 0; j < links.length; j++) {
+                    if (nodes[i].name == links[j].source.name) {
+                        nodes[i][links[j].target.name] = {
+                            name: links[j].target.name
+                        };
+                    }
+                    if (nodes[i].name == links[j].target.name) {
+                        nodes[i][links[j].source.name] = {
+                            name: links[j].source.name
+                        };
+                    }
+                }
+            }
+            //D3力导向布局
+            var force = d3.layout.force()
+                .nodes(nodes)
+                .links(links)
+                .size([width, height])
+                .linkDistance(200)
+                .charge(-1500)
+                .start();
+            // 全图缩放器
+            var zoom = d3.behavior.zoom()
+                .scaleExtent([0.25, 2]);
+            var svg = d3.select("#" + divid).append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .attr("style", "background-color:" + backgroundColor)
+                .call(zoom)
+                .on('dblclick.zoom', null);
+            // 缩放层（位置必须在 container 之前）
+            var zoomOverlay = svg.append('rect')
+                .attr('width', width)
+                .attr('height', height)
+                .style('fill', 'none')
+                .style('pointer-events', 'all');
+            var container = svg.append('g')
+                .attr('transform', 'scale(' + 0.6 + ')')
+                .attr('class', 'container');
+            // 根据分类进行筛选
+            if (options.showExamples) {
+                var examples = svg.selectAll(".examples")
+                    .data(relationColor)
+                    .enter()
+                    .append("svg:g")
+                    .attr("fill-opacity", function(d) {
+                        for (var i = 0; i < dataFilter.length; i++) {
+                            if (d.relation == dataFilter[i].relation && dataFilter[i].isShow == "false") {
+                                return 0.2;
+                            }
+                        }
+                        return 1;
+                    })
+                    .on("click", function(d) {
+                        for (var i = 0; i < dataFilter.length; i++) {
+                            if (dataFilter[i].relation == d.relation) {
+                                if (dataFilter[i].isShow == "true") {
+                                    dataFilter[i].isShow = "false";
+                                } else {
+                                    dataFilter[i].isShow = "true";
+                                }
+                            }
+                        }
+                        drawChart(divid, options, datas, dataFilter);
+                    });
+
+
+                examples.append("svg:path")
+                    .attr("d", function(d) {
+                        var x1 = d.x;
+                        var y1 = d.y;
+                        var x2 = x1 + 20;
+                        var y2 = y1;
+                        return 'M' + x1 + ' ' + y1 + ' L ' + x2 + ' ' + y2;
+                    })
+                    .style("stroke", function(d) {
+                        if (d.lineColor == "") {
+                            return lineColor;
+                        } else {
+                            return d.lineColor;
+                        }
+                    })
+                    .style("stroke-width", 2.5);
+
+            }
+
+            //设置连接线             
+            var edges_path = container.selectAll(".edgepath")
+                .data(links)
+                .enter()
+                .append("path")
+                .attr("marker-end", function(d, i) {
+                    var arrowMarker = container.append("marker")
+                        .attr("id", "arrow" + i)
+                        .attr("markerUnits", "userSpaceOnUse")
+                        .attr("markerWidth", "16")
+                        .attr("markerHeight", "15")
+                        .attr("viewBox", "0 0 12 12")
+                        .attr("refX", 9)
+                        .attr("refY", 6)
+                        .attr("orient", "auto")
+                        .append("svg:path")
+                        .attr("d", "M2,2 L10,6 L2,10 L6,6 L2,2")
+                        .attr("fill", function() {
+                            return d.lineColor = "" ? lineColor : d.lineColor;
+                        });
+
+                    return "url(#arrow" + i + ")";
+                })
+                .style("stroke", function(d) {
+                    if (d.lineColor == "") {
+                        return lineColor;
+                    } else {
+                        return d.lineColor;
+                    }
+                })
+                .style("stroke-width", 1.5)
+                .on("mouseout", function(d, i) {
+                    //显示连线上的文字
+                    edges_text.style("fill-opacity", 1);
+                    edges_path.style("stroke-width", 1.5);
+                    // 隐藏提示信息
+                    tooltip.style("opacity", 0.0);
+                });
+
+
+            //边上的文字（人物之间的关系），连接线            
+            var edges_text = container.selectAll(".linetext")
+                .data(links)
+                .enter()
+                .append("svg:g")
+                .attr("class", "linetext")
+                .attr("fill-opacity", 1);
+            edges_text.append("svg:text")
+                .style("font-size", (22 + "px"))
+                .style("font-family", lineFontType)
+                .style("fill", "#000000")
+                .attr("y", ".33em")
+                .attr('text-anchor', "middle")
+                .text(function(d) {
+                    return d.relation;
+                });
+
+            edges_text.insert('rect', 'text')
+                .attr('width', function(d) {
+                    return d.relation.length * lineFontSize;
+                })
+                .attr('height', function(d) {
+                    return lineFontSize;
+                })
+                .attr("y", "-.6em")
+                .attr('x', function(d) {
+                    return -d.relation.length * lineFontSize / 2;
+                })
+                .style('fill', 'none');
+
+            var circle = container.selectAll("circle")
+                .data(nodes)
+                .enter()
+                .append("circle")
+                .style("stroke", function(d) {
+                    return d.color;
+                })
+                .style("stroke-width", "3px")
+                .attr("r", function(d) {
+                    return d.radius;
+                })
+                .attr("fill", function(d, i) {
+                    if (d.color == "") {
+                        return "#EE8262";
+                    }
+                    return d.color;
+
+                })
+                .call(force.drag);
+
+            var tooltip = d3.select("body").append("div")
+                .attr("class", "tooltip")
+                .attr("opacity", 0.0);
+
+            var nodes_text = container.selectAll(".nodetext")
+                .data(nodes)
+                .enter()
+                .append("text")
+                .style("font-size", (nodesFontSize + "px"))
+                .style("fill", "#ffffff")
+                .style("font-family", nodesFontType)
+                .attr('x', function(d) {
+                    var name = d.name;
+                    //如果小于四个字符，不换行
+                    if (name.length < 4) {
+                        d3.select(this).append('tspan')
+                            .attr("dx", -nodesFontSize * (name.length / 2))
+                            .attr("dy", 5)
+                            .text(function() {
+                                return name;
+                            });
+                    } else if (name.length >= 4 && name.length <= 6) {
+                        var top = d.name.substring(0, 3);
+                        var bot = d.name.substring(3, name.length);
+
+                        d3.select(this).append('tspan')
+                            .attr("dx", -nodesFontSize * 1.5)
+                            .attr("dy", -nodesFontSize * 0.5)
+                            .text(function() {
+                                return top;
+                            });
+
+                        d3.select(this).append('tspan')
+                            .attr("dx", -(nodesFontSize * name.length / 2))
+                            .attr("dy", nodesFontSize)
+                            .text(function() {
+                                return bot;
+                            });
+                    } else if (name.length > 7) {
+                        var top = d.name.substring(0, 3);
+                        var mid = d.name.substring(3, 6);
+                        var bot = d.name.substring(6, name.length);
+
+                        d3.select(this).append('tspan')
+                            .attr("dx", -nodesFontSize * 1.5)
+                            .attr("dy", -nodesFontSize * 0.5)
+                            .text(function() {
+                                return top;
+                            });
+
+
+                        d3.select(this).append('tspan')
+                            .attr("dx", -nodesFontSize * 3)
+                            .attr("dy", nodesFontSize)
+                            .text(function() {
+                                return mid;
+                            });
+
+                        d3.select(this).append('tspan')
+                            .attr("dx", -nodesFontSize * 2)
+                            .attr("dy", nodesFontSize)
+                            .text(function() {
+                                return "...";
+                            });
+                    }
+                })
+
+                .on("mouseout", function(d, i) {
+                    edges_text.style("fill-opacity", 1);
+                    edges_path.style("opacity", 1);
+                    circle.style("opacity", 1);
+                    nodes_text.style("opacity", 1);
+                    tooltip.style("opacity", 0.0);
+
+                })
+                .call(force.drag);
+
+            force.on("tick", function() {
+                edges_path.attr("d", function(d) {
+                    var tan = Math.abs((d.target.y - d.source.y) / (d.target.x - d.source
+                        .x)); //圆心连线tan值
+                    var x1 = d.target.x - d.source.x > 0 ? Math.sqrt(d.sourceRadius * d.sourceRadius / (
+                            tan * tan + 1)) + d.source.x :
+                        d.source.x - Math.sqrt(d.sourceRadius * d.sourceRadius / (tan * tan +
+                            1)); //起点x坐标
+                    var y1 = d.target.y - d.source.y > 0 ? Math.sqrt(d.sourceRadius * d.sourceRadius *
+                            tan * tan / (tan * tan + 1)) + d.source.y :
+                        d.source.y - Math.sqrt(d.sourceRadius * d.sourceRadius * tan * tan / (tan *
+                            tan + 1)); //起点y坐标
+                    var x2 = d.target.x - d.source.x > 0 ? d.target.x - Math.sqrt(d.targetRadius * d
+                            .targetRadius / (1 + tan * tan)) :
+                        d.target.x + Math.sqrt(d.targetRadius * d.targetRadius / (1 + tan *
+                            tan)); //终点x坐标
+                    var y2 = d.target.y - d.source.y > 0 ? d.target.y - Math.sqrt(d.targetRadius * d
+                            .targetRadius * tan * tan / (1 + tan * tan)) :
+                        d.target.y + Math.sqrt(d.targetRadius * d.targetRadius * tan * tan / (1 + tan *
+                            tan)); //终点y坐标
+                    if (d.target.x - d.source.x == 0 || tan == 0) { //斜率无穷大的情况或为0时
+                        y1 = d.target.y - d.source.y > 0 ? d.source.y + d.sourceRadius : d.source.y - d
+                            .sourceRadius;
+                        y2 = d.target.y - d.source.y > 0 ? d.target.y - d.targetRadius : d.target.y + d
+                            .targetRadius;
+                    }
+                    // 防报错
+                    if (!x1 || !y1 || !x2 || !y2) {
+                        return
+                    }
+                    if (d.linknum == 0) { //设置编号为0的连接线为直线，其他连接线会均分在两边  
+                        d.x_start = x1;
+                        d.y_start = y1;
+                        d.x_end = x2;
+                        d.y_end = y2;
+                        return 'M' + x1 + ' ' + y1 + ' L ' + x2 + ' ' + y2;
+                    }
+                    var a = d.sourceRadius > d.targetRadius ? d.targetRadius * d.linknum / 3 : d
+                        .sourceRadius * d.linknum / 3;
+                    var xm = d.target.x - d.source.x > 0 ? d.source.x + Math.sqrt((d.sourceRadius * d
+                            .sourceRadius - a * a) / (1 + tan * tan)) :
+                        d.source.x - Math.sqrt((d.sourceRadius * d.sourceRadius - a * a) / (1 + tan *
+                            tan));
+                    var ym = d.target.y - d.source.y > 0 ? d.source.y + Math.sqrt((d.sourceRadius * d
+                            .sourceRadius - a * a) * tan * tan / (1 + tan * tan)) :
+                        d.source.y - Math.sqrt((d.sourceRadius * d.sourceRadius - a * a) * tan * tan / (
+                            1 + tan * tan));
+                    var xn = d.target.x - d.source.x > 0 ? d.target.x - Math.sqrt((d.targetRadius * d
+                            .targetRadius - a * a) / (1 + tan * tan)) :
+                        d.target.x + Math.sqrt((d.targetRadius * d.targetRadius - a * a) / (1 + tan *
+                            tan));
+                    var yn = d.target.y - d.source.y > 0 ? d.target.y - Math.sqrt((d.targetRadius * d
+                            .targetRadius - a * a) * tan * tan / (1 + tan * tan)) :
+                        d.target.y + Math.sqrt((d.targetRadius * d.targetRadius - a * a) * tan * tan / (
+                            1 + tan * tan));
+                    if (d.target.x - d.source.x == 0 || tan == 0) { //斜率无穷大或为0时
+                        ym = d.target.y - d.source.y > 0 ? d.source.y + Math.sqrt(d.sourceRadius * d
+                            .sourceRadius - a * a) : d.source.y - Math.sqrt(d.sourceRadius * d
+                            .sourceRadius - a * a);
+                        yn = d.target.y - d.source.y > 0 ? d.target.y - Math.sqrt(d.targetRadius * d
+                            .targetRadius - a * a) : d.target.y + Math.sqrt(d.targetRadius * d
+                            .targetRadius - a * a);
+                    }
+
+                    var k = (x1 - x2) / (y2 - y1); //连线垂线的斜率
+                    var dx = Math.sqrt(a * a / (1 + k * k)); //相对垂点x轴距离
+                    var dy = Math.sqrt(a * a * k * k / (1 + k * k)); //相对垂点y轴距离
+                    if ((y2 - y1) == 0) {
+                        dx = 0;
+                        dy = Math.sqrt(a * a);
+                    }
+                    if (a > 0) {
+                        var xs = k > 0 ? xm - dx : xm + dx;
+                        var ys = ym - dy;
+                        var xt = k > 0 ? xn - dx : xn + dx;
+                        var yt = yn - dy;
+                    } else {
+                        var xs = k > 0 ? xm + dx : xm - dx;
+                        var ys = ym + dy;
+                        var xt = k > 0 ? xn + dx : xn - dx;
+                        var yt = yn + dy;
+                    }
+                    //记录连线起始和终止坐标，用于定位线上文字
+                    d.x_start = xs;
+                    d.y_start = ys;
+                    d.x_end = xt;
+                    d.y_end = yt;
+                    return 'M' + xs + ' ' + ys + ' L ' + xt + ' ' + yt;
+                });
+
+                edges_text.attr("transform", function(d) {
+                    if (!d.x_start || !d.y_start || !d.x_end || !d.y_end) {
+                        return
+                    }
+                    return "translate(" + (d.x_start + d.x_end) / 2 + "," + ((+d.y_start) + (+d
+                            .y_end)) / 2 +
+                        ")" + " rotate(" + Math.atan((d.y_end - d.y_start) / (d.x_end - d.x_start)) *
+                        180 / Math.PI + ")";
+                });
+
+
+                circle.attr("cx", function(d) {
+                    return d.x
+                });
+                circle.attr("cy", function(d) {
+                    return d.y
+                });
+
+                nodes_text.attr("x", function(d) {
+                    return d.x
+                });
+                nodes_text.attr("y", function(d) {
+                    return d.y
+                });
+            });
+        }
+
+        // 分配編號
+        function setLinkNumber(group) {
+            if (group.length == 0) return;
+            if (group.length == 1) {
+                group[0].linknum = 0;
+                return;
+            }
+            var maxLinkNumber = group.length % 2 == 0 ? group.length / 2 : (group.length - 1) / 2;
+            if (group.length % 2 == 0) {
+                var startLinkNum = -maxLinkNumber + 0.5;
+                for (var i = 0; i < group.length; i++) {
+                    group[i].linknum = startLinkNum++;
+                }
+            } else {
+                var startLinkNum = -maxLinkNumber;
+                for (var i = 0; i < group.length; i++) {
+                    group[i].linknum = startLinkNum++;
+                }
+            }
+
+        }
+    </script>
 
     <!-- Page Wrapper -->
     <div id="wrapper">
@@ -34,7 +621,7 @@
                 <div class="sidebar-brand-icon rotate-n-15">
                     <i class="fas fa-laugh-wink"></i>
                 </div>
-                <div class="sidebar-brand-text mx-3">SB Admin <sup>2</sup></div>
+                <div class="sidebar-brand-text mx-3">犯罪雷達 <sup>V1</sup></div>
             </a>
 
             <!-- Divider -->
@@ -44,7 +631,7 @@
             <li class="nav-item active">
                 <a class="nav-link" href="index.html">
                     <i class="fas fa-fw fa-tachometer-alt"></i>
-                    <span>Dashboard</span></a>
+                    <span>首頁</span></a>
             </li>
 
             <!-- Divider -->
@@ -52,97 +639,27 @@
 
             <!-- Heading -->
             <div class="sidebar-heading">
-                Interface
+                主功能
             </div>
 
             <!-- Nav Item - Pages Collapse Menu -->
             <li class="nav-item">
                 <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="true" aria-controls="collapseTwo">
                     <i class="fas fa-fw fa-cog"></i>
-                    <span>Components</span>
+                    <span>找尋犯罪人</span>
                 </a>
-                <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
-                    <div class="bg-white py-2 collapse-inner rounded">
-                        <h6 class="collapse-header">Custom Components:</h6>
-                        <a class="collapse-item" href="buttons.html">Buttons</a>
-                        <a class="collapse-item" href="cards.html">Cards</a>
-                    </div>
-                </div>
             </li>
 
             <!-- Nav Item - Utilities Collapse Menu -->
             <li class="nav-item">
                 <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseUtilities" aria-expanded="true" aria-controls="collapseUtilities">
                     <i class="fas fa-fw fa-wrench"></i>
-                    <span>Utilities</span>
+                    <span>犯罪圖</span>
                 </a>
-                <div id="collapseUtilities" class="collapse" aria-labelledby="headingUtilities" data-parent="#accordionSidebar">
-                    <div class="bg-white py-2 collapse-inner rounded">
-                        <h6 class="collapse-header">Custom Utilities:</h6>
-                        <a class="collapse-item" href="utilities-color.html">Colors</a>
-                        <a class="collapse-item" href="utilities-border.html">Borders</a>
-                        <a class="collapse-item" href="utilities-animation.html">Animations</a>
-                        <a class="collapse-item" href="utilities-other.html">Other</a>
-                    </div>
-                </div>
             </li>
 
             <!-- Divider -->
             <hr class="sidebar-divider">
-
-            <!-- Heading -->
-            <div class="sidebar-heading">
-                Addons
-            </div>
-
-            <!-- Nav Item - Pages Collapse Menu -->
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePages" aria-expanded="true" aria-controls="collapsePages">
-                    <i class="fas fa-fw fa-folder"></i>
-                    <span>Pages</span>
-                </a>
-                <div id="collapsePages" class="collapse" aria-labelledby="headingPages" data-parent="#accordionSidebar">
-                    <div class="bg-white py-2 collapse-inner rounded">
-                        <h6 class="collapse-header">Login Screens:</h6>
-                        <a class="collapse-item" href="login.html">Login</a>
-                        <a class="collapse-item" href="register.html">Register</a>
-                        <a class="collapse-item" href="forgot-password.html">Forgot Password</a>
-                        <div class="collapse-divider"></div>
-                        <h6 class="collapse-header">Other Pages:</h6>
-                        <a class="collapse-item" href="404.html">404 Page</a>
-                        <a class="collapse-item" href="blank.html">Blank Page</a>
-                    </div>
-                </div>
-            </li>
-
-            <!-- Nav Item - Charts -->
-            <li class="nav-item">
-                <a class="nav-link" href="charts.html">
-                    <i class="fas fa-fw fa-chart-area"></i>
-                    <span>Charts</span></a>
-            </li>
-
-            <!-- Nav Item - Tables -->
-            <li class="nav-item">
-                <a class="nav-link" href="tables.html">
-                    <i class="fas fa-fw fa-table"></i>
-                    <span>Tables</span></a>
-            </li>
-
-            <!-- Divider -->
-            <hr class="sidebar-divider d-none d-md-block">
-
-            <!-- Sidebar Toggler (Sidebar) -->
-            <div class="text-center d-none d-md-inline">
-                <button class="rounded-circle border-0" id="sidebarToggle"></button>
-            </div>
-
-            <!-- Sidebar Message -->
-            <div class="sidebar-card">
-                <img class="sidebar-card-illustration mb-2" src="../static/img/undraw_rocket.svg" alt="">
-                <p class="text-center mb-2"><strong>SB Admin Pro</strong> is packed with premium features, components, and more!</p>
-                <a class="btn btn-success btn-sm" href="https://startbootstrap.com/theme/sb-admin-pro">Upgrade to Pro!</a>
-            </div>
 
         </ul>
         <!-- End of Sidebar -->
@@ -153,287 +670,13 @@
             <!-- Main Content -->
             <div id="content">
 
-                <!-- Topbar -->
-                <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
-
-                    <!-- Sidebar Toggle (Topbar) -->
-                    <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
-                        <i class="fa fa-bars"></i>
-                    </button>
-
-                    <!-- Topbar Search -->
-                    <form class="d-none d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100 navbar-search">
-                        <div class="input-group">
-                            <input type="text" class="form-control bg-light border-0 small" placeholder="Search for..." aria-label="Search" aria-describedby="basic-addon2">
-                            <div class="input-group-append">
-                                <button class="btn btn-primary" type="button">
-                                    <i class="fas fa-search fa-sm"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-
-                    <!-- Topbar Navbar -->
-                    <ul class="navbar-nav ml-auto">
-
-                        <!-- Nav Item - Search Dropdown (Visible Only XS) -->
-                        <li class="nav-item dropdown no-arrow d-sm-none">
-                            <a class="nav-link dropdown-toggle" href="#" id="searchDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="fas fa-search fa-fw"></i>
-                            </a>
-                            <!-- Dropdown - Messages -->
-                            <div class="dropdown-menu dropdown-menu-right p-3 shadow animated--grow-in" aria-labelledby="searchDropdown">
-                                <form class="form-inline mr-auto w-100 navbar-search">
-                                    <div class="input-group">
-                                        <input type="text" class="form-control bg-light border-0 small" placeholder="Search for..." aria-label="Search" aria-describedby="basic-addon2">
-                                        <div class="input-group-append">
-                                            <button class="btn btn-primary" type="button">
-                                                <i class="fas fa-search fa-sm"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </form>
-                            </div>
-                        </li>
-
-                        <!-- Nav Item - Alerts -->
-                        <li class="nav-item dropdown no-arrow mx-1">
-                            <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="fas fa-bell fa-fw"></i>
-                                <!-- Counter - Alerts -->
-                                <span class="badge badge-danger badge-counter">3+</span>
-                            </a>
-                            <!-- Dropdown - Alerts -->
-                            <div class="dropdown-list dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="alertsDropdown">
-                                <h6 class="dropdown-header">
-                                    Alerts Center
-                                </h6>
-                                <a class="dropdown-item d-flex align-items-center" href="#">
-                                    <div class="mr-3">
-                                        <div class="icon-circle bg-primary">
-                                            <i class="fas fa-file-alt text-white"></i>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div class="small text-gray-500">December 12, 2019</div>
-                                        <span class="font-weight-bold">A new monthly report is ready to download!</span>
-                                    </div>
-                                </a>
-                                <a class="dropdown-item d-flex align-items-center" href="#">
-                                    <div class="mr-3">
-                                        <div class="icon-circle bg-success">
-                                            <i class="fas fa-donate text-white"></i>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div class="small text-gray-500">December 7, 2019</div>
-                                        $290.29 has been deposited into your account!
-                                    </div>
-                                </a>
-                                <a class="dropdown-item d-flex align-items-center" href="#">
-                                    <div class="mr-3">
-                                        <div class="icon-circle bg-warning">
-                                            <i class="fas fa-exclamation-triangle text-white"></i>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div class="small text-gray-500">December 2, 2019</div>
-                                        Spending Alert: We've noticed unusually high spending for your account.
-                                    </div>
-                                </a>
-                                <a class="dropdown-item text-center small text-gray-500" href="#">Show All Alerts</a>
-                            </div>
-                        </li>
-
-                        <!-- Nav Item - Messages -->
-                        <li class="nav-item dropdown no-arrow mx-1">
-                            <a class="nav-link dropdown-toggle" href="#" id="messagesDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="fas fa-envelope fa-fw"></i>
-                                <!-- Counter - Messages -->
-                                <span class="badge badge-danger badge-counter">7</span>
-                            </a>
-                            <!-- Dropdown - Messages -->
-                            <div class="dropdown-list dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="messagesDropdown">
-                                <h6 class="dropdown-header">
-                                    Message Center
-                                </h6>
-                                <a class="dropdown-item d-flex align-items-center" href="#">
-                                    <div class="dropdown-list-image mr-3">
-                                        <img class="rounded-circle" src="../static/img/undraw_profile_1.svg" alt="">
-                                        <div class="status-indicator bg-success"></div>
-                                    </div>
-                                    <div class="font-weight-bold">
-                                        <div class="text-truncate">Hi there! I am wondering if you can help me with a
-                                            problem I've been having.</div>
-                                        <div class="small text-gray-500">Emily Fowler · 58m</div>
-                                    </div>
-                                </a>
-                                <a class="dropdown-item d-flex align-items-center" href="#">
-                                    <div class="dropdown-list-image mr-3">
-                                        <img class="rounded-circle" src="../static/img/undraw_profile_2.svg" alt="">
-                                        <div class="status-indicator"></div>
-                                    </div>
-                                    <div>
-                                        <div class="text-truncate">I have the photos that you ordered last month, how
-                                            would you like them sent to you?</div>
-                                        <div class="small text-gray-500">Jae Chun · 1d</div>
-                                    </div>
-                                </a>
-                                <a class="dropdown-item d-flex align-items-center" href="#">
-                                    <div class="dropdown-list-image mr-3">
-                                        <img class="rounded-circle" src="../static/img/undraw_profile_3.svg" alt="">
-                                        <div class="status-indicator bg-warning"></div>
-                                    </div>
-                                    <div>
-                                        <div class="text-truncate">Last month's report looks great, I am very happy with
-                                            the progress so far, keep up the good work!</div>
-                                        <div class="small text-gray-500">Morgan Alvarez · 2d</div>
-                                    </div>
-                                </a>
-                                <a class="dropdown-item d-flex align-items-center" href="#">
-                                    <div class="dropdown-list-image mr-3">
-                                        <img class="rounded-circle" src="https://source.unsplash.com/Mv9hjnEUHR4/60x60" alt="">
-                                        <div class="status-indicator bg-success"></div>
-                                    </div>
-                                    <div>
-                                        <div class="text-truncate">Am I a good boy? The reason I ask is because someone
-                                            told me that people say this to all dogs, even if they aren't good...</div>
-                                        <div class="small text-gray-500">Chicken the Dog · 2w</div>
-                                    </div>
-                                </a>
-                                <a class="dropdown-item text-center small text-gray-500" href="#">Read More Messages</a>
-                            </div>
-                        </li>
-
-                        <div class="topbar-divider d-none d-sm-block"></div>
-
-                        <!-- Nav Item - User Information -->
-                        <li class="nav-item dropdown no-arrow">
-                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <span class="mr-2 d-none d-lg-inline text-gray-600 small">Douglas McGee</span>
-                                <img class="img-profile rounded-circle" src="../static/img/undraw_profile.svg">
-                            </a>
-                            <!-- Dropdown - User Information -->
-                            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
-                                <a class="dropdown-item" href="#">
-                                    <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
-                                    Profile
-                                </a>
-                                <a class="dropdown-item" href="#">
-                                    <i class="fas fa-cogs fa-sm fa-fw mr-2 text-gray-400"></i>
-                                    Settings
-                                </a>
-                                <a class="dropdown-item" href="#">
-                                    <i class="fas fa-list fa-sm fa-fw mr-2 text-gray-400"></i>
-                                    Activity Log
-                                </a>
-                                <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#logoutModal">
-                                    <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
-                                    Logout
-                                </a>
-                            </div>
-                        </li>
-
-                    </ul>
-
-                </nav>
-                <!-- End of Topbar -->
-
                 <!-- Begin Page Content -->
                 <div class="container-fluid">
 
                     <!-- Page Heading -->
                     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
-                        <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm"><i class="fas fa-download fa-sm text-white-50"></i> Generate Report</a>
+                        <h1 class="h3 mb-0 text-gray-800">找尋犯罪人</h1>
                     </div>
-
-                    <!-- Content Row -->
-                    <div class="row">
-
-                        <!-- Earnings (Monthly) Card Example -->
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-left-primary shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                                Earnings (Monthly)</div>
-                                            <div class="h5 mb-0 font-weight-bold text-gray-800">$40,000</div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Earnings (Monthly) Card Example -->
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-left-success shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                                Earnings (Annual)</div>
-                                            <div class="h5 mb-0 font-weight-bold text-gray-800">$215,000</div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Earnings (Monthly) Card Example -->
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-left-info shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Tasks
-                                            </div>
-                                            <div class="row no-gutters align-items-center">
-                                                <div class="col-auto">
-                                                    <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">50%</div>
-                                                </div>
-                                                <div class="col">
-                                                    <div class="progress progress-sm mr-2">
-                                                        <div class="progress-bar bg-info" role="progressbar" style="width: 50%" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Pending Requests Card Example -->
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-left-warning shadow h-100 py-2">
-                                <div class="card-body">
-                                    <div class="row no-gutters align-items-center">
-                                        <div class="col mr-2">
-                                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                                Pending Requests</div>
-                                            <div class="h5 mb-0 font-weight-bold text-gray-800">18</div>
-                                        </div>
-                                        <div class="col-auto">
-                                            <i class="fas fa-comments fa-2x text-gray-300"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Content Row -->
 
                     <div class="row">
@@ -459,192 +702,11 @@
                                 </div>
                                 <!-- Card Body -->
                                 <div class="card-body">
-                                    <div class="chart-area">
-                                        <canvas id="myAreaChart"></canvas>
-                                    </div>
+                                    <div id="divid"></div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Pie Chart -->
-                        <div class="col-xl-4 col-lg-5">
-                            <div class="card shadow mb-4">
-                                <!-- Card Header - Dropdown -->
-                                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                                    <h6 class="m-0 font-weight-bold text-primary">Revenue Sources</h6>
-                                    <div class="dropdown no-arrow">
-                                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
-                                        </a>
-                                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in" aria-labelledby="dropdownMenuLink">
-                                            <div class="dropdown-header">Dropdown Header:</div>
-                                            <a class="dropdown-item" href="#">Action</a>
-                                            <a class="dropdown-item" href="#">Another action</a>
-                                            <div class="dropdown-divider"></div>
-                                            <a class="dropdown-item" href="#">Something else here</a>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Card Body -->
-                                <div class="card-body">
-                                    <div class="chart-pie pt-4 pb-2">
-                                        <canvas id="myPieChart"></canvas>
-                                    </div>
-                                    <div class="mt-4 text-center small">
-                                        <span class="mr-2">
-                                            <i class="fas fa-circle text-primary"></i> Direct
-                                        </span>
-                                        <span class="mr-2">
-                                            <i class="fas fa-circle text-success"></i> Social
-                                        </span>
-                                        <span class="mr-2">
-                                            <i class="fas fa-circle text-info"></i> Referral
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Content Row -->
-                    <div class="row">
-
-                        <!-- Content Column -->
-                        <div class="col-lg-6 mb-4">
-
-                            <!-- Project Card Example -->
-                            <div class="card shadow mb-4">
-                                <div class="card-header py-3">
-                                    <h6 class="m-0 font-weight-bold text-primary">Projects</h6>
-                                </div>
-                                <div class="card-body">
-                                    <h4 class="small font-weight-bold">Server Migration <span class="float-right">20%</span></h4>
-                                    <div class="progress mb-4">
-                                        <div class="progress-bar bg-danger" role="progressbar" style="width: 20%" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
-                                    </div>
-                                    <h4 class="small font-weight-bold">Sales Tracking <span class="float-right">40%</span></h4>
-                                    <div class="progress mb-4">
-                                        <div class="progress-bar bg-warning" role="progressbar" style="width: 40%" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100"></div>
-                                    </div>
-                                    <h4 class="small font-weight-bold">Customer Database <span class="float-right">60%</span></h4>
-                                    <div class="progress mb-4">
-                                        <div class="progress-bar" role="progressbar" style="width: 60%" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
-                                    </div>
-                                    <h4 class="small font-weight-bold">Payout Details <span class="float-right">80%</span></h4>
-                                    <div class="progress mb-4">
-                                        <div class="progress-bar bg-info" role="progressbar" style="width: 80%" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
-                                    </div>
-                                    <h4 class="small font-weight-bold">Account Setup <span class="float-right">Complete!</span></h4>
-                                    <div class="progress">
-                                        <div class="progress-bar bg-success" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Color System -->
-                            <div class="row">
-                                <div class="col-lg-6 mb-4">
-                                    <div class="card bg-primary text-white shadow">
-                                        <div class="card-body">
-                                            Primary
-                                            <div class="text-white-50 small">#4e73df</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-lg-6 mb-4">
-                                    <div class="card bg-success text-white shadow">
-                                        <div class="card-body">
-                                            Success
-                                            <div class="text-white-50 small">#1cc88a</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-lg-6 mb-4">
-                                    <div class="card bg-info text-white shadow">
-                                        <div class="card-body">
-                                            Info
-                                            <div class="text-white-50 small">#36b9cc</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-lg-6 mb-4">
-                                    <div class="card bg-warning text-white shadow">
-                                        <div class="card-body">
-                                            Warning
-                                            <div class="text-white-50 small">#f6c23e</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-lg-6 mb-4">
-                                    <div class="card bg-danger text-white shadow">
-                                        <div class="card-body">
-                                            Danger
-                                            <div class="text-white-50 small">#e74a3b</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-lg-6 mb-4">
-                                    <div class="card bg-secondary text-white shadow">
-                                        <div class="card-body">
-                                            Secondary
-                                            <div class="text-white-50 small">#858796</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-lg-6 mb-4">
-                                    <div class="card bg-light text-black shadow">
-                                        <div class="card-body">
-                                            Light
-                                            <div class="text-black-50 small">#f8f9fc</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-lg-6 mb-4">
-                                    <div class="card bg-dark text-white shadow">
-                                        <div class="card-body">
-                                            Dark
-                                            <div class="text-white-50 small">#5a5c69</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-
-                        <div class="col-lg-6 mb-4">
-
-                            <!-- Illustrations -->
-                            <div class="card shadow mb-4">
-                                <div class="card-header py-3">
-                                    <h6 class="m-0 font-weight-bold text-primary">Illustrations</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="text-center">
-                                        <img class="img-fluid px-3 px-sm-4 mt-3 mb-4" style="width: 25rem;" src="../static/img/undraw_posting_photo.svg" alt="">
-                                    </div>
-                                    <p>Add some quality, svg illustrations to your project courtesy of <a target="_blank" rel="nofollow" href="https://undraw.co/">unDraw</a>, a
-                                        constantly updated collection of beautiful svg images that you can use
-                                        completely free and without attribution!</p>
-                                    <a target="_blank" rel="nofollow" href="https://undraw.co/">Browse Illustrations on
-                                        unDraw &rarr;</a>
-                                </div>
-                            </div>
-
-                            <!-- Approach -->
-                            <div class="card shadow mb-4">
-                                <div class="card-header py-3">
-                                    <h6 class="m-0 font-weight-bold text-primary">Development Approach</h6>
-                                </div>
-                                <div class="card-body">
-                                    <p>SB Admin 2 makes extensive use of Bootstrap 4 utility classes in order to reduce
-                                        CSS bloat and poor page performance. Custom CSS classes are used to create
-                                        custom components and custom utility classes.</p>
-                                    <p class="mb-0">Before working with this theme, you should become familiar with the
-                                        Bootstrap framework, especially the utility classes.</p>
-                                </div>
-                            </div>
-
-                        </div>
                     </div>
 
                 </div>
@@ -657,7 +719,7 @@
             <footer class="sticky-footer bg-white">
                 <div class="container my-auto">
                     <div class="copyright text-center my-auto">
-                        <span>Copyright &copy; Your Website 2020</span>
+                        <span>Copyright &copy; 犯罪雷達</span>
                     </div>
                 </div>
             </footer>
@@ -674,31 +736,9 @@
         <i class="fas fa-angle-up"></i>
     </a>
 
-    <!-- Logout Modal-->
-    <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Ready to Leave?</h5>
-                    <button class="close" type="button" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">×</span>
-                    </button>
-                </div>
-                <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-                    <a class="btn btn-primary" href="login.html">Logout</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Bootstrap core JavaScript-->
     <script src="../static/vendor/jquery/jquery.min.js"></script>
     <script src="../static/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-
-    <!-- Core plugin JavaScript-->
-    <script src="../static/vendor/jquery-easing/jquery.easing.min.js"></script>
 
     <!-- Custom scripts for all pages-->
     <script src="../static/js/sb-admin-2.min.js"></script>

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from flask import Flask , request , jsonify
+from flask import Flask , request
 from flask import render_template
 import os
 import model.main as m
@@ -28,4 +28,3 @@ if __name__ == "__main__":
     
     port = int(os.environ.get('PORT', 9453))
     app.run(host='0.0.0.0', port=port)
-

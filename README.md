@@ -17,6 +17,9 @@
 
 ### 後端主要使用的組件
 
+1. bert : https://huggingface.co/transformers/model_doc/bert.html
+2. ckip : https://github.com/ckiplab/ckiptagger/wiki/Chinese-README
+
 ### 前端主要使用的組件
 
 以現代的瀏覽器為主， IE11以下不考慮支援
