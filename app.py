@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from flask import Flask , request
+from flask import Flask , request , jsonify
+import json
 from flask import render_template
 import os
 import model.main as m
@@ -22,21 +23,26 @@ def preditIsCrime():
     inputold = content['NewsContext']
     return m.getCrimeFlag(inputold)
 
-# 犯罪分類API
+# 犯罪人API
 @app.route("/PreditCrimePeoples" , methods=['POST'])
 def preditCrimePeoples():
     content = request.json
     inputold = content['NewsContext']
-    return_json=m.getCrimeFlag(inputold)
+    response=m.getCrimeFlag(inputold)
+    print(type(response.data))
+    print('response.data',response.data)
+    return_json=json.loads(response.data)
     flag=return_json['ResRedict']
-    if flag=='1':
-        return c.get_person_str(ws,pos,ner,inputold)
+    print('flag',flag)
+    if flag == 1:
+        return jsonify( { "people":c.get_person_str(ws,pos,ner,inputold)} )
     else:
-        return '[]'
+        return jsonify( { "people":'' } )
     
 if __name__ == "__main__":
 
-    print(torch.__version__)  #注意是双下划线
+    print(torch.__version__)
+    print(torch.cuda.is_available())
     print('載入ckip資源,這將會花一點時間')
     ws, pos, ner = c.load_data()
     

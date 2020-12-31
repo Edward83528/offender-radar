@@ -2,6 +2,5 @@ flask
 tensorflow
 matplotlib
 pymssql
-torch
 transformers
 snownlp

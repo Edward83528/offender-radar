@@ -1,5 +1,6 @@
 jupyter:
-conda install pytorch torchvision cudatoolkit=10.2 -c pytorch
+我的電腦是NVIDIA GeForce GTX 960M的顯卡。
+conda install pytorch torchvision cudatoolkit=9.2 -c pytorch -c defaults -c numba/label/dev
 pip install  transformers
 pip install snownlp
 pip install -U ckiptagger
