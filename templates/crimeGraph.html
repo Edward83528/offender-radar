@@ -11,8 +11,8 @@
                     </div>
                     <form class="user">
                         <div class="form-group">
-                            <label for="content">輸入犯罪人,例如:張綱維</label>
-                            <input type="text" class="form-control form-control-user" id="content" name="content" placeholder="輸入:犯罪人">
+                            <label for="content">輸入犯罪人</label>
+                            <input type="text" class="form-control form-control-user" id="content" name="content" placeholder="輸入:犯罪人,例如:張綱維">
                         </div>
                         <a href="#" id="find" class="btn btn-primary btn-user btn-block">
                             找尋
@@ -59,7 +59,13 @@
 
 
 {% block script %}
+<script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<!-- Page level plugins -->
+<script src="../static/vendor/chart.js/Chart.min.js"></script>
 
+<!-- Page level custom scripts -->
+<script src="../static/js/demo/chart-area-demo.js"></script>
+<script src="../static/js/demo/chart-pie-demo.js"></script>
 <script>
 
     $(document).ready(function() {
