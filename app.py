@@ -44,7 +44,7 @@ def preditCrimePeoples():
     if flag == 1:
         return jsonify( { "people":c.get_person_str(ws,pos,ner,inputold)} )
     else:
-        return jsonify( { "people":'' } )
+        return jsonify( { "people":'非犯罪文章或無犯罪人名' } )
     
 # 找犯罪關係人API
 @app.route("/FindPeoples" , methods=['POST'])
