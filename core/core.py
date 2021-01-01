@@ -87,3 +87,21 @@ def insertNews(items,isCriminal):
         return True;
     except:
         return False;
+def findPeople(people):
+    list_temp = []
+    try:
+        conn = pymssql.connect(server, user, password, database)
+        cursor=getCursor(conn)
+        cursor.execute("SELECT people FROM News where people like N'%"+people+"%'")
+        row = cursor.fetchone() 
+        while row:
+            if row[0]!=None:
+                temp=row[0].split(",")
+                list_temp.extend(temp)
+            row = cursor.fetchone()
+            
+        cursor.close()
+        conn.close()
+        return list_temp;
+    except:
+        return list_temp;

@@ -1,0 +1,77 @@
+{% extends "layout.html" %}
+   
+{% block body %}
+
+    <div class="card-body p-0">
+        <!-- Nested Row within Card Body -->
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="p-5">
+                    <div class="text-center">
+                        <h1 class="h4 text-gray-900 mb-4">貼入文章找尋犯罪人</h1>
+                    </div>
+                    <form class="user">
+                        <div class="form-group">
+                            <label for="content">輸入:文章</label>
+                            <textarea class="form-control" id="content" name="content" rows="5"></textarea>
+                        </div>
+                        <a href="#" id="find" class="btn btn-primary btn-user btn-block">
+                            找尋
+                        </a>
+                    </form>
+                    <hr>
+                    <div class="form-group">
+                        <label for="people">輸出犯罪人</label>
+                        <textarea class="form-control" id="people" name="people" rows="5"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="message" class="modal inmodal fade" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-body">
+                    找尋中,請稍後
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+
+{% block script %}
+<script>
+
+    $(document).ready(function() {
+    
+        $(document).on("click", "#find", function() {
+            var contents = $("#content").val();
+            if (!$.trim(contents)) {
+                $("#content").focus();
+                alert("請務必填入內容");
+                return false;
+            }
+            var dataJSON = {};
+            dataJSON["NewsContext"] = contents;
+            $.ajax({
+                type: 'POST',
+                url: "/PreditCrimePeoples",
+                data: JSON.stringify(dataJSON),
+                dataType: "json",
+                contentType: "application/json;charset=utf-8",
+                success: function(msg) {
+                    $("#message").modal('hide');
+                    $("#people").val(msg.people);
+                    $("#people").focus();
+                },
+                beforeSend: function() {
+                    $("#message").modal('show');
+                }
+            });
+        });
+    
+    });
+</script>
+
+{% endblock %}

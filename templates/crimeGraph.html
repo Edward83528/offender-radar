@@ -1,0 +1,679 @@
+{% extends "layout.html" %}
+   
+{% block body %}
+    <div class="card-body p-0">
+        <!-- Nested Row within Card Body -->
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="p-5">
+                    <div class="text-center">
+                        <h1 class="h4 text-gray-900 mb-4">輸入犯罪人找尋犯罪網路圖</h1>
+                    </div>
+                    <form class="user">
+                        <div class="form-group">
+                            <label for="content">輸入犯罪人,例如:張綱維</label>
+                            <input type="text" class="form-control form-control-user" id="content" name="content" placeholder="輸入:犯罪人">
+                        </div>
+                        <a href="#" id="find" class="btn btn-primary btn-user btn-block">
+                            找尋
+                        </a>
+                    </form>
+                    <hr>
+                </div>
+            </div>
+        </div>
+    
+    </div>
+    <!-- Begin Page Content -->
+    <div class="container-fluid">
+    
+    
+        <div class="row">
+    
+            <!-- Area Chart -->
+            <div class="col-xl-8 col-lg-7">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">犯罪網</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="divid"></div>
+                    </div>
+                </div>
+            </div>
+    
+        </div>
+    
+    </div>
+    <!-- /.container-fluid -->
+    <div id="message" class="modal inmodal fade" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-body">
+                    找尋中,請稍後
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+
+{% block script %}
+
+<script>
+
+    $(document).ready(function() {
+    
+        $(document).on("click", "#find", function() {
+            var contents = $("#content").val();
+            if (!$.trim(contents)) {
+                $("#content").focus();
+                alert("請務必填入犯罪人");
+                return false;
+            }
+            var dataJSON = {};
+            dataJSON["people"] = contents;
+            $.ajax({
+                type: 'POST',
+                url: "/FindPeoples",
+                data: JSON.stringify(dataJSON),
+                dataType: "json",
+                contentType: "application/json;charset=utf-8",
+                success: function(msg) {
+                    $("#message").modal('hide');
+                    if (msg.people != '') {
+                        showChart(contents, msg.people);
+                    } else {
+                        alert("查無資料");
+                    }
+    
+                },
+                beforeSend: function() {
+                    $("#message").modal('show');
+                }
+            });
+        });
+    
+    });
+    
+    function showChart(init, people) {
+        var data = {};
+        var linksJSON = {};
+        series = [];
+        for (var index = 0; index < people.length; index++) {
+            if (people[index]) {
+                var linksJSON = {
+                    source: init,
+                    target: people[index],
+                    relation: "同謀",
+                    sourceColor: "#F4793B",
+                    targetColor: "red",
+                    sourceRadius: "70",
+                    targetRadius: "50"
+                };
+                series.push(linksJSON);
+            }
+        }
+        data["links"] = series;
+        var options = {};
+        options.backgroundColor = "#eee";
+        options.nodesFontType = "SimHei";
+        options.nodesFontSize = 30;
+        options.lineFontType = "SimHei";
+        options.lineFontSize = 24;
+        options.lineColor = "#000000";
+        options.showExamples = true;
+        options.examplesX = 100;
+        options.examplesY = 300;
+        options.examplesFontColor = "#000000";
+        drawChart("divid", options, data);
+    }
+    
+    
+    function drawChart(divid, options, datas, dataFilter) {
+        var backgroundColor = options.backgroundColor; //背景颜色
+        var nodesFontType = options.nodesFontType; //节点字体
+        var nodesFontSize = options.nodesFontSize; //节点字号
+        var lineFontType = options.lineFontType; //关系字体
+        var lineFontSize = options.lineFontSize; //关系字号
+        var lineColor = options.lineColor; //连线颜色
+        var examplesFontColor = options.examplesFontColor; //关系示例字体颜色
+    
+        var width = 600; //画布宽
+        var height = 400; //画布高
+        var svgChart = d3.select("svg");
+        svgChart.remove();
+    
+        var tip = $(".tooltip");
+        if (tip.length > 0) {
+            tip.remove();
+        }
+    
+        var sourceDatas = {};
+        sourceDatas.links = [];
+        for (var i = 0; i < datas.links.length; i++) {
+            var jsonObj = {};
+            jsonObj.source = datas.links[i].source;
+            jsonObj.target = datas.links[i].target;
+            jsonObj.relation = datas.links[i].relation;
+            jsonObj.sourceImg = datas.links[i].sourceImg;
+            jsonObj.targetImg = datas.links[i].targetImg;
+            jsonObj.sourceColor = datas.links[i].sourceColor;
+            jsonObj.targetColor = datas.links[i].targetColor;
+            jsonObj.sourceRadius = datas.links[i].sourceRadius;
+            jsonObj.targetRadius = datas.links[i].targetRadius;
+            jsonObj.lineColor = '#458B00';
+    
+            jsonObj.data = datas.links[i].data;
+            sourceDatas.links.push(jsonObj);
+        }
+        var resourceLinks = sourceDatas.links;
+    
+    
+        if (dataFilter != undefined && dataFilter.length > 0) {
+            var indexArray = [];
+            for (var i = 0; i < dataFilter.length; i++) {
+                for (var j = 0; j < resourceLinks.length; j++) {
+                    if (resourceLinks[j].relation == dataFilter[i].relation && dataFilter[i].isShow == "false") {
+                        indexArray.push(j);
+                    }
+                }
+            }
+            if (indexArray.length > 0) {
+                var tempArray = [];
+                for (var j = 0; j < resourceLinks.length; j++) {
+                    for (var i = 0; i < indexArray.length; i++) {
+                        if (indexArray[i] != j) {
+                            if (i == indexArray.length - 1) {
+                                tempArray.push(resourceLinks[j]);
+                                break;
+                            }
+                            continue;
+                        } else {
+                            break;
+                        }
+    
+                    }
+                }
+                resourceLinks = tempArray;
+            }
+        }
+        var links = resourceLinks;
+    
+        //关系分组  
+        var linkGroup = {};
+        //对连接线进行统计和分组，不区分连接线的方向，只要属于同两个实体，即认为是同一组  
+        var linkmap = {};
+        for (var i = 0; i < links.length; i++) {
+            var key = links[i].source < links[i].target ? links[i].source + ':' + links[i].target : links[i]
+                .target + ':' + links[i].source;
+            if (!linkmap.hasOwnProperty(key)) {
+                linkmap[key] = 0;
+            }
+            linkmap[key] += 1;
+            if (!linkGroup.hasOwnProperty(key)) {
+                linkGroup[key] = [];
+            }
+            linkGroup[key].push(links[i]);
+        }
+        //为每一条连接线分配size属性，同时对每一组连接线进行编号  
+        for (var i = 0; i < links.length; i++) {
+            var key = links[i].source < links[i].target ? links[i].source + ':' + links[i].target : links[i]
+                .target + ':' + links[i].source;
+            links[i].size = linkmap[key];
+            //同一组的关系进行编号  
+            var group = linkGroup[key];
+            //给节点分配编号  
+            setLinkNumber(group);
+        }
+    
+        //节点
+        var nodes = {};
+        //关系对应颜色
+        var relationColor = {};
+    
+        for (var i = 0; i < links.length; i++) {
+            links[i].source = nodes[links[i].source] || (nodes[links[i].source] = {
+                name: links[i].source,
+                color: links[i].sourceColor,
+                image: links[i].sourceImg,
+                radius: links[i].sourceRadius
+            });
+            links[i].target = nodes[links[i].target] || (nodes[links[i].target] = {
+                name: links[i].target,
+                color: links[i].targetColor,
+                image: links[i].targetImg,
+                radius: links[i].targetRadius
+            });
+        }
+    
+        var sourceData = datas.links;
+        for (var i = 0; i < sourceData.length; i++) {
+            relationColor[sourceData[i].relation] = {
+                "relation": sourceData[i].relation,
+                "lineColor": sourceData[i].lineColor
+            };
+        }
+    
+    
+        nodes = d3.values(nodes);
+        relationColor = d3.values(relationColor);
+    
+        var examples_x = parseFloat(options.examplesX); //关系示例坐标x
+        var examples_y = parseFloat(options.examplesY); //关系示例坐标y
+        var examplesLength = 80;
+        var examplesSize = Math.floor((width - examples_x) / examplesLength);
+        var examplesRow = relationColor.length % examplesSize == 0 ? relationColor.length / examplesSize : Math
+            .ceil(relationColor.length / examplesSize);
+        //计算关系示列位置
+        for (var i = 1; i <= relationColor.length; i++) {
+            var num = i % examplesSize == 0 ? examplesSize : i % examplesSize;
+            relationColor[i - 1].x = examples_x + (num - 1) * examplesLength;
+            relationColor[i - 1].y = examples_y + 20 * Math.ceil(i / examplesSize);
+        }
+        if (dataFilter == undefined) {
+            dataFilter = [];
+            for (var i = 0; i < relationColor.length; i++) {
+                dataFilter.push({
+                    "relation": relationColor[i].relation,
+                    "isShow": "true"
+                });
+            }
+        }
+    
+    
+        //绑定相连节点
+        for (var i = 0; i < nodes.length; i++) {
+            for (var j = 0; j < links.length; j++) {
+                if (nodes[i].name == links[j].source.name) {
+                    nodes[i][links[j].target.name] = {
+                        name: links[j].target.name
+                    };
+                }
+                if (nodes[i].name == links[j].target.name) {
+                    nodes[i][links[j].source.name] = {
+                        name: links[j].source.name
+                    };
+                }
+            }
+        }
+        //D3力导向布局
+        var force = d3.layout.force()
+            .nodes(nodes)
+            .links(links)
+            .size([width, height])
+            .linkDistance(200)
+            .charge(-1500)
+            .start();
+        // 全图缩放器
+        var zoom = d3.behavior.zoom()
+            .scaleExtent([0.25, 2]);
+        var svg = d3.select("#" + divid).append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .attr("style", "background-color:" + backgroundColor)
+            .call(zoom)
+            .on('dblclick.zoom', null);
+        // 缩放层（位置必须在 container 之前）
+        var zoomOverlay = svg.append('rect')
+            .attr('width', width)
+            .attr('height', height)
+            .style('fill', 'none')
+            .style('pointer-events', 'all');
+        var container = svg.append('g')
+            .attr('transform', 'scale(' + 0.6 + ')')
+            .attr('class', 'container');
+        // 根据分类进行筛选
+        if (options.showExamples) {
+            var examples = svg.selectAll(".examples")
+                .data(relationColor)
+                .enter()
+                .append("svg:g")
+                .attr("fill-opacity", function(d) {
+                    for (var i = 0; i < dataFilter.length; i++) {
+                        if (d.relation == dataFilter[i].relation && dataFilter[i].isShow == "false") {
+                            return 0.2;
+                        }
+                    }
+                    return 1;
+                })
+                .on("click", function(d) {
+                    for (var i = 0; i < dataFilter.length; i++) {
+                        if (dataFilter[i].relation == d.relation) {
+                            if (dataFilter[i].isShow == "true") {
+                                dataFilter[i].isShow = "false";
+                            } else {
+                                dataFilter[i].isShow = "true";
+                            }
+                        }
+                    }
+                    drawChart(divid, options, datas, dataFilter);
+                });
+    
+    
+            examples.append("svg:path")
+                .attr("d", function(d) {
+                    var x1 = d.x;
+                    var y1 = d.y;
+                    var x2 = x1 + 20;
+                    var y2 = y1;
+                    return 'M' + x1 + ' ' + y1 + ' L ' + x2 + ' ' + y2;
+                })
+                .style("stroke", function(d) {
+                    if (d.lineColor == "") {
+                        return lineColor;
+                    } else {
+                        return d.lineColor;
+                    }
+                })
+                .style("stroke-width", 2.5);
+    
+        }
+    
+        //设置连接线             
+        var edges_path = container.selectAll(".edgepath")
+            .data(links)
+            .enter()
+            .append("path")
+            .attr("marker-end", function(d, i) {
+                var arrowMarker = container.append("marker")
+                    .attr("id", "arrow" + i)
+                    .attr("markerUnits", "userSpaceOnUse")
+                    .attr("markerWidth", "16")
+                    .attr("markerHeight", "15")
+                    .attr("viewBox", "0 0 12 12")
+                    .attr("refX", 9)
+                    .attr("refY", 6)
+                    .attr("orient", "auto")
+                    .append("svg:path")
+                    .attr("d", "M2,2 L10,6 L2,10 L6,6 L2,2")
+                    .attr("fill", function() {
+                        return d.lineColor = "" ? lineColor : d.lineColor;
+                    });
+    
+                return "url(#arrow" + i + ")";
+            })
+            .style("stroke", function(d) {
+                if (d.lineColor == "") {
+                    return lineColor;
+                } else {
+                    return d.lineColor;
+                }
+            })
+            .style("stroke-width", 1.5)
+            .on("mouseout", function(d, i) {
+                //显示连线上的文字
+                edges_text.style("fill-opacity", 1);
+                edges_path.style("stroke-width", 1.5);
+                // 隐藏提示信息
+                tooltip.style("opacity", 0.0);
+            });
+    
+    
+        //边上的文字（人物之间的关系），连接线            
+        var edges_text = container.selectAll(".linetext")
+            .data(links)
+            .enter()
+            .append("svg:g")
+            .attr("class", "linetext")
+            .attr("fill-opacity", 1);
+        edges_text.append("svg:text")
+            .style("font-size", (22 + "px"))
+            .style("font-family", lineFontType)
+            .style("fill", "#000000")
+            .attr("y", ".33em")
+            .attr('text-anchor', "middle")
+            .text(function(d) {
+                return d.relation;
+            });
+    
+        edges_text.insert('rect', 'text')
+            .attr('width', function(d) {
+                return d.relation.length * lineFontSize;
+            })
+            .attr('height', function(d) {
+                return lineFontSize;
+            })
+            .attr("y", "-.6em")
+            .attr('x', function(d) {
+                return -d.relation.length * lineFontSize / 2;
+            })
+            .style('fill', 'none');
+    
+        var circle = container.selectAll("circle")
+            .data(nodes)
+            .enter()
+            .append("circle")
+            .style("stroke", function(d) {
+                return d.color;
+            })
+            .style("stroke-width", "3px")
+            .attr("r", function(d) {
+                return d.radius;
+            })
+            .attr("fill", function(d, i) {
+                if (d.color == "") {
+                    return "#EE8262";
+                }
+                return d.color;
+    
+            })
+            .call(force.drag);
+    
+        var tooltip = d3.select("body").append("div")
+            .attr("class", "tooltip")
+            .attr("opacity", 0.0);
+    
+        var nodes_text = container.selectAll(".nodetext")
+            .data(nodes)
+            .enter()
+            .append("text")
+            .style("font-size", (nodesFontSize + "px"))
+            .style("fill", "#ffffff")
+            .style("font-family", nodesFontType)
+            .attr('x', function(d) {
+                var name = d.name;
+                //如果小于四个字符，不换行
+                if (name.length < 4) {
+                    d3.select(this).append('tspan')
+                        .attr("dx", -nodesFontSize * (name.length / 2))
+                        .attr("dy", 5)
+                        .text(function() {
+                            return name;
+                        });
+                } else if (name.length >= 4 && name.length <= 6) {
+                    var top = d.name.substring(0, 3);
+                    var bot = d.name.substring(3, name.length);
+    
+                    d3.select(this).append('tspan')
+                        .attr("dx", -nodesFontSize * 1.5)
+                        .attr("dy", -nodesFontSize * 0.5)
+                        .text(function() {
+                            return top;
+                        });
+    
+                    d3.select(this).append('tspan')
+                        .attr("dx", -(nodesFontSize * name.length / 2))
+                        .attr("dy", nodesFontSize)
+                        .text(function() {
+                            return bot;
+                        });
+                } else if (name.length > 7) {
+                    var top = d.name.substring(0, 3);
+                    var mid = d.name.substring(3, 6);
+                    var bot = d.name.substring(6, name.length);
+    
+                    d3.select(this).append('tspan')
+                        .attr("dx", -nodesFontSize * 1.5)
+                        .attr("dy", -nodesFontSize * 0.5)
+                        .text(function() {
+                            return top;
+                        });
+    
+    
+                    d3.select(this).append('tspan')
+                        .attr("dx", -nodesFontSize * 3)
+                        .attr("dy", nodesFontSize)
+                        .text(function() {
+                            return mid;
+                        });
+    
+                    d3.select(this).append('tspan')
+                        .attr("dx", -nodesFontSize * 2)
+                        .attr("dy", nodesFontSize)
+                        .text(function() {
+                            return "...";
+                        });
+                }
+            })
+    
+            .on("mouseout", function(d, i) {
+                edges_text.style("fill-opacity", 1);
+                edges_path.style("opacity", 1);
+                circle.style("opacity", 1);
+                nodes_text.style("opacity", 1);
+                tooltip.style("opacity", 0.0);
+    
+            })
+            .call(force.drag);
+    
+        force.on("tick", function() {
+            edges_path.attr("d", function(d) {
+                var tan = Math.abs((d.target.y - d.source.y) / (d.target.x - d.source
+                    .x)); //圆心连线tan值
+                var x1 = d.target.x - d.source.x > 0 ? Math.sqrt(d.sourceRadius * d.sourceRadius / (
+                        tan * tan + 1)) + d.source.x :
+                    d.source.x - Math.sqrt(d.sourceRadius * d.sourceRadius / (tan * tan +
+                        1)); //起点x坐标
+                var y1 = d.target.y - d.source.y > 0 ? Math.sqrt(d.sourceRadius * d.sourceRadius *
+                        tan * tan / (tan * tan + 1)) + d.source.y :
+                    d.source.y - Math.sqrt(d.sourceRadius * d.sourceRadius * tan * tan / (tan *
+                        tan + 1)); //起点y坐标
+                var x2 = d.target.x - d.source.x > 0 ? d.target.x - Math.sqrt(d.targetRadius * d
+                        .targetRadius / (1 + tan * tan)) :
+                    d.target.x + Math.sqrt(d.targetRadius * d.targetRadius / (1 + tan *
+                        tan)); //终点x坐标
+                var y2 = d.target.y - d.source.y > 0 ? d.target.y - Math.sqrt(d.targetRadius * d
+                        .targetRadius * tan * tan / (1 + tan * tan)) :
+                    d.target.y + Math.sqrt(d.targetRadius * d.targetRadius * tan * tan / (1 + tan *
+                        tan)); //终点y坐标
+                if (d.target.x - d.source.x == 0 || tan == 0) { //斜率无穷大的情况或为0时
+                    y1 = d.target.y - d.source.y > 0 ? d.source.y + d.sourceRadius : d.source.y - d
+                        .sourceRadius;
+                    y2 = d.target.y - d.source.y > 0 ? d.target.y - d.targetRadius : d.target.y + d
+                        .targetRadius;
+                }
+                // 防报错
+                if (!x1 || !y1 || !x2 || !y2) {
+                    return
+                }
+                if (d.linknum == 0) { //设置编号为0的连接线为直线，其他连接线会均分在两边  
+                    d.x_start = x1;
+                    d.y_start = y1;
+                    d.x_end = x2;
+                    d.y_end = y2;
+                    return 'M' + x1 + ' ' + y1 + ' L ' + x2 + ' ' + y2;
+                }
+                var a = d.sourceRadius > d.targetRadius ? d.targetRadius * d.linknum / 3 : d
+                    .sourceRadius * d.linknum / 3;
+                var xm = d.target.x - d.source.x > 0 ? d.source.x + Math.sqrt((d.sourceRadius * d
+                        .sourceRadius - a * a) / (1 + tan * tan)) :
+                    d.source.x - Math.sqrt((d.sourceRadius * d.sourceRadius - a * a) / (1 + tan *
+                        tan));
+                var ym = d.target.y - d.source.y > 0 ? d.source.y + Math.sqrt((d.sourceRadius * d
+                        .sourceRadius - a * a) * tan * tan / (1 + tan * tan)) :
+                    d.source.y - Math.sqrt((d.sourceRadius * d.sourceRadius - a * a) * tan * tan / (
+                        1 + tan * tan));
+                var xn = d.target.x - d.source.x > 0 ? d.target.x - Math.sqrt((d.targetRadius * d
+                        .targetRadius - a * a) / (1 + tan * tan)) :
+                    d.target.x + Math.sqrt((d.targetRadius * d.targetRadius - a * a) / (1 + tan *
+                        tan));
+                var yn = d.target.y - d.source.y > 0 ? d.target.y - Math.sqrt((d.targetRadius * d
+                        .targetRadius - a * a) * tan * tan / (1 + tan * tan)) :
+                    d.target.y + Math.sqrt((d.targetRadius * d.targetRadius - a * a) * tan * tan / (
+                        1 + tan * tan));
+                if (d.target.x - d.source.x == 0 || tan == 0) { //斜率无穷大或为0时
+                    ym = d.target.y - d.source.y > 0 ? d.source.y + Math.sqrt(d.sourceRadius * d
+                        .sourceRadius - a * a) : d.source.y - Math.sqrt(d.sourceRadius * d
+                        .sourceRadius - a * a);
+                    yn = d.target.y - d.source.y > 0 ? d.target.y - Math.sqrt(d.targetRadius * d
+                        .targetRadius - a * a) : d.target.y + Math.sqrt(d.targetRadius * d
+                        .targetRadius - a * a);
+                }
+    
+                var k = (x1 - x2) / (y2 - y1); //连线垂线的斜率
+                var dx = Math.sqrt(a * a / (1 + k * k)); //相对垂点x轴距离
+                var dy = Math.sqrt(a * a * k * k / (1 + k * k)); //相对垂点y轴距离
+                if ((y2 - y1) == 0) {
+                    dx = 0;
+                    dy = Math.sqrt(a * a);
+                }
+                if (a > 0) {
+                    var xs = k > 0 ? xm - dx : xm + dx;
+                    var ys = ym - dy;
+                    var xt = k > 0 ? xn - dx : xn + dx;
+                    var yt = yn - dy;
+                } else {
+                    var xs = k > 0 ? xm + dx : xm - dx;
+                    var ys = ym + dy;
+                    var xt = k > 0 ? xn + dx : xn - dx;
+                    var yt = yn + dy;
+                }
+                //记录连线起始和终止坐标，用于定位线上文字
+                d.x_start = xs;
+                d.y_start = ys;
+                d.x_end = xt;
+                d.y_end = yt;
+                return 'M' + xs + ' ' + ys + ' L ' + xt + ' ' + yt;
+            });
+    
+            edges_text.attr("transform", function(d) {
+                if (!d.x_start || !d.y_start || !d.x_end || !d.y_end) {
+                    return
+                }
+                return "translate(" + (d.x_start + d.x_end) / 2 + "," + ((+d.y_start) + (+d
+                        .y_end)) / 2 +
+                    ")" + " rotate(" + Math.atan((d.y_end - d.y_start) / (d.x_end - d.x_start)) *
+                    180 / Math.PI + ")";
+            });
+    
+    
+            circle.attr("cx", function(d) {
+                return d.x
+            });
+            circle.attr("cy", function(d) {
+                return d.y
+            });
+    
+            nodes_text.attr("x", function(d) {
+                return d.x
+            });
+            nodes_text.attr("y", function(d) {
+                return d.y
+            });
+        });
+    }
+    
+    // 分配編號
+    function setLinkNumber(group) {
+        if (group.length == 0) return;
+        if (group.length == 1) {
+            group[0].linknum = 0;
+            return;
+        }
+        var maxLinkNumber = group.length % 2 == 0 ? group.length / 2 : (group.length - 1) / 2;
+        if (group.length % 2 == 0) {
+            var startLinkNum = -maxLinkNumber + 0.5;
+            for (var i = 0; i < group.length; i++) {
+                group[i].linknum = startLinkNum++;
+            }
+        } else {
+            var startLinkNum = -maxLinkNumber;
+            for (var i = 0; i < group.length; i++) {
+                group[i].linknum = startLinkNum++;
+            }
+        }
+    
+    }
+</script>
+{% endblock %}

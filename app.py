@@ -16,6 +16,16 @@ global config, ws, pos, ner
 def index():
     return render_template('index.html')
 
+# 跳轉預測犯罪人頁面
+@app.route("/crimePeoples")
+def crimePeoples():
+    return render_template('crimePeoples.html')
+
+# 跳轉犯罪圖頁面
+@app.route("/crimeGraph")
+def crimeGraph():
+    return render_template('crimeGraph.html')
+
 # 犯罪分類API
 @app.route("/PreditIsCrime" , methods=['POST'])
 def preditIsCrime():
@@ -23,22 +33,27 @@ def preditIsCrime():
     inputold = content['NewsContext']
     return m.getCrimeFlag(inputold)
 
-# 犯罪人API
+# 文章找犯罪人API
 @app.route("/PreditCrimePeoples" , methods=['POST'])
 def preditCrimePeoples():
     content = request.json
     inputold = content['NewsContext']
     response=m.getCrimeFlag(inputold)
-    print(type(response.data))
-    print('response.data',response.data)
     return_json=json.loads(response.data)
     flag=return_json['ResRedict']
-    print('flag',flag)
     if flag == 1:
         return jsonify( { "people":c.get_person_str(ws,pos,ner,inputold)} )
     else:
         return jsonify( { "people":'' } )
     
+# 找犯罪關係人API
+@app.route("/FindPeoples" , methods=['POST'])
+def findPeoples():
+    content = request.json
+    peopleOld = content['people']
+    peopleList=c.findPeople(peopleOld)
+    return jsonify( { "people":peopleList } )
+
 if __name__ == "__main__":
 
     print(torch.__version__)
