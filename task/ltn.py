@@ -18,7 +18,7 @@ items=[]
 keyword = quote('犯罪')
 start_date = datetime.datetime.now().strftime('%Y-%m-%d')
 end_date = datetime.datetime.now().strftime('%Y-%m-%d')
-pages = '5'
+pages = '3'
 
 
 def start_requests():

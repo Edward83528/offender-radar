@@ -4,7 +4,9 @@
 
 主要概念為兩項功能:
 1. 輸入犯罪文章 > 輸出「犯罪關係人」 ( 輸入不是犯罪文章 > 「輸出非犯罪文章或無犯罪人名」 )
+![image](https://github.com/harry83528/taskQALineBot/blob/master/messageImage_1578628507824.jpg)
 2. 輸入犯罪人 > 輸出犯罪關係圖
+![image](https://github.com/harry83528/taskQALineBot/blob/master/messageImage_1578628507824.jpg)
 
 專案目前分成5個 目錄夾：
 
