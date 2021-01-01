@@ -1,5 +1,11 @@
 {% extends "layout.html" %}
-   
+{% block css %}
+<style>
+svg {
+    width: 100%;
+}
+</style>
+{% endblock %}
 {% block body %}
     <div class="card-body p-0">
         <!-- Nested Row within Card Body -->
@@ -31,7 +37,7 @@
         <div class="row">
     
             <!-- Area Chart -->
-            <div class="col-xl-8 col-lg-7">
+            <div class="col-xl-12 col-lg-7">
                 <div class="card shadow mb-4">
                     <div class="card-header py-3">
                         <h6 class="m-0 font-weight-bold text-primary">犯罪網</h6>
