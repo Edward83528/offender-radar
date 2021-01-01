@@ -3,15 +3,16 @@
 API集
 @author: Zhong-wei
 """
-import configparser # 讀取設定檔
+
 import pymssql
 from snownlp import SnowNLP
 from ckiptagger import data_utils, construct_dictionary, WS, POS, NER
 global config, ws, pos, ner
+import configparser # 讀取設定檔
 
 config = configparser.ConfigParser()    
 config.read('config.ini')
-    
+
 server=config['Pymssqlsql']['server']
 database=config['Pymssqlsql']['database']
 user=config['Pymssqlsql']['user']
@@ -66,7 +67,7 @@ def getCursor(conn):
     cursor = conn.cursor()   
     return cursor
 
-def insertNews(items,isCriminal):
+def insertNews(ws,pos,ner,items,isCriminal):
     try:
         conn = pymssql.connect(server, user, password, database)
         cursor=getCursor(conn)
@@ -77,15 +78,16 @@ def insertNews(items,isCriminal):
             body=item['body']
             postdate=item['postdate']
             updatetime=item['updatetime']
-            criminal=str(isCriminal);
-            people=get_person_str(ws, pos, ner,body);
+            criminal=str(isCriminal)
+            people=",".join(get_person_str(ws, pos, ner,body))
             cursor.execute("INSERT INTO News(title,link,[content],criminal,people,postdate,updatetime) VALUES ('"+title+"', '"+link+"', '"+body+"','"+criminal+"','"+people+"','"+postdate+"','"+updatetime+"')")
             conn.commit()
-    
+
         cursor.close()
         conn.close()
         return True;
-    except:
+    except Exception as e:
+        print('Exception:',e)
         return False;
 def findPeople(people):
     list_temp = []

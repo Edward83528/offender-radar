@@ -13,10 +13,12 @@ from bs4 import BeautifulSoup as bs
 from urllib.parse import quote
 from core.core import insertNews
 
+items=[]
+
 keyword = quote('犯罪')
 start_date = datetime.datetime.now().strftime('%Y-%m-%d')
 end_date = datetime.datetime.now().strftime('%Y-%m-%d')
-pages = '3'
+pages = '5'
 
 
 def start_requests():
@@ -85,15 +87,12 @@ def parseLtnNews(uri):
           })
         current+=1
 
-
-if __name__ == '__main__':
-    items = []
-    start_requests();
+def start_crawler(ws,pos,ner):
+    print('開始爬蟲')
+    start_requests()
     #row_json = json.dumps(items, ensure_ascii=False)
     #file = codecs.open(urllib.parse.unquote(keyword)+'.json', 'w', encoding='utf-8')
     #file.write(row_json)
     #file.close()
-    
-    insertNews(items,True)
-  
-    print("Done")
+    print('result:',insertNews(ws,pos,ner,items,True))
+    print('結束爬蟲')

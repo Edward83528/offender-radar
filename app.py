@@ -5,7 +5,9 @@ from flask import render_template
 import os
 import model.main as m
 import core.core as c
+import task.ltn as l
 import torch
+
 # 創建一個falsk對象(建立類別實體app)
 app = Flask(__name__)
 
@@ -54,10 +56,16 @@ def findPeoples():
     peopleList=c.findPeople(peopleOld)
     return jsonify( { "people":peopleList } )
 
+# 爬蟲動作
+@app.route("/crawler")
+def crawler():
+    l.start_crawler(ws,pos,ner)
+    return render_template('index.html')
+
 if __name__ == "__main__":
 
-    print(torch.__version__)
-    print(torch.cuda.is_available())
+    print('torch.__version__:',torch.__version__)
+    print('torch.cuda.is_available()',torch.cuda.is_available())
     print('載入ckip資源,這將會花一點時間')
     ws, pos, ner = c.load_data()
     

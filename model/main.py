@@ -10,6 +10,7 @@ import configparser # 讀取設定檔
 
 config = configparser.ConfigParser()    
 config.read('config.ini')
+
 model_path=config['Model']['path']
 
 def fillZero( tokens , max_len ) :  

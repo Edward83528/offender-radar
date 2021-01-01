@@ -13,7 +13,7 @@
                     <form class="user">
                         <div class="form-group">
                             <label for="content">輸入文章</label>
-                            <textarea class="form-control" id="content" name="content" rows="5"></textarea>
+                            <textarea class="form-control" id="content" name="content" rows="5" maxlength="510" placeholder="請輸入文章"></textarea>
                         </div>
                         <a href="#" id="find" class="btn btn-primary btn-user btn-block">
                             找尋
@@ -22,7 +22,7 @@
                     <hr>
                     <div class="form-group">
                         <label for="people">輸出犯罪人</label>
-                        <textarea class="form-control" id="people" name="people" rows="5"></textarea>
+                        <textarea class="form-control" id="people" name="people" rows="5" placeholder="這區塊為輸出區塊"></textarea>
                     </div>
                 </div>
             </div>
@@ -49,7 +49,7 @@
             var contents = $("#content").val();
             if (!$.trim(contents)) {
                 $("#content").focus();
-                alert("請務必填入內容");
+                alert("必須填入內容");
                 return false;
             }
             var dataJSON = {};
