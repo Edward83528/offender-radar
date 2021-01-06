@@ -1,6 +1,6 @@
 # 犯罪雷達
 
-使用python為開發語言，加上深度學習中預訓練的Bert模型訓練一個犯罪分類器與犯罪關鍵人找尋模型，Database 為 Sql Server 2012 以上，以 Flask 為應用程式開發基礎框架。
+使用python為開發語言，加上深度學習中預訓練的[Bert](https://huggingface.co/transformers/model_doc/bert.html)模型fine tune一個犯罪分類器並利用[中央研究院CkipTagger model](https://github.com/ckiplab/ckiptagger/wiki/Chinese-README)萃取犯罪人名，Database 為 Sql Server 2019，以 Flask 為應用程式開發基礎框架。
 
 主要概念為兩項功能:
 1. 輸入犯罪文章 > 輸出「犯罪關係人」 ( 輸入不是犯罪文章 > 「輸出非犯罪文章或無犯罪人名」 )
@@ -8,20 +8,21 @@
 2. 輸入犯罪人 > 輸出犯罪關係圖
 ![image](https://github.com/Edward83528/offender-radar/blob/master/static/img/info2.jpg)
 
-專案目前分成5個 目錄夾：
+專案目前分成7個 目錄夾：
 
-1. db : 資料庫sql。
-2. core：共用函式庫。
-3. model：提供bert深度學習模型。
-4. static：靜態資源存放。
-5. task：排程的程式。
-6. templates：存放網頁模板。
+1. core：共用函式庫。
+2. dataset：bert犯罪分類使用資料集。
+3. db : 資料庫sql。
+4. model：提供bert深度學習模型。
+5. static：靜態資源存放。
+6. task：排程的程式。
+7. templates：存放網頁模板。
 
 ### 後端主要使用的組件
 
 1. [Bert](https://huggingface.co/transformers/model_doc/bert.html)
 2. [Pytorch](https://pytorch.org)
-3. [ckip](https://github.com/ckiplab/ckiptagger/wiki/Chinese-README)
+3. [CkipTagger model](https://github.com/ckiplab/ckiptagger/wiki/Chinese-README)
 4. [snownlp](https://github.com/isnowfy/snownlp)
 
 ### 前端主要使用的組件
