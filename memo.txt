@@ -1,9 +1,6 @@
-jupyter:
-我的電腦是NVIDIA GeForce GTX 960M的顯卡。
+jupyter另外安裝pytorch:
+我的電腦是NVIDIA GeForce GTX 960M的顯卡搭配以下規格(下面請依照自己電腦規則裝不同版本的torch)。
 conda install pytorch torchvision cudatoolkit=9.2 -c pytorch -c defaults -c numba/label/dev
-pip install  transformers
-pip install snownlp
-pip install -U ckiptagger
 
-ckip:
-https://github.com/ckiplab/ckiptagger/wiki/Chinese-README
+與另外安裝ckiptagger
+pip install -U ckiptagger
