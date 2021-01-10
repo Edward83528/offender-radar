@@ -1,6 +1,6 @@
 # 犯罪雷達
 
-使用python 3.7.9為開發語言，加上深度學習中預訓練的[Bert](https://huggingface.co/transformers/model_doc/bert.html)模型fine tune一個犯罪分類器並利用[中央研究院CkipTagger model](https://github.com/ckiplab/ckiptagger/wiki/Chinese-README)萃取犯罪人名，Database 使用 Sql Server 2019，以 Flask 為應用程式開發基礎框架。
+使用python 3.7.9為開發語言，加上深度學習中預訓練的[Bert](https://huggingface.co/transformers/model_doc/bert.html)模型訓練一個犯罪分類器並利用[中央研究院CkipTagger model](https://github.com/ckiplab/ckiptagger/wiki/Chinese-README)萃取犯罪人名，Database 使用 Sql Server 2019，以 Flask 為應用程式開發基礎框架。
 
 犯罪雷達主要概念與貢獻為以下兩項功能:
 1. 輸入犯罪文章 > 輸出「犯罪關係人」 ( 輸入不是犯罪文章 > 「輸出非犯罪文章或無犯罪人名」 )
@@ -50,6 +50,59 @@ db/schema.sql 和 db/data.sql，請先匯入此script，建立table
 data.sql 是手動寫的 insert script，建置起始資料
 
 # 重要程式碼解說
+## bert模型訓練
+    輸入的文章要組成bert的input格式
+```python
+def ToBertFormat( title , label ) :
+  # From makeDataset : TensorDataset(all_input_ids, all_input_segment_ids, all_input_masks, all_answer_lables)
+  selLen = -1 
+  # [0] : id
+  tokens = tokenizer.tokenize( title )
+  content_id = tokenizer.build_inputs_with_special_tokens(tokenizer.convert_tokens_to_ids(tokens))
+  selLen = len(content_id)
+  content_id = fillZero(content_id, max_seq_len)
+  # [1] : segment ids
+  segment_id = [0]*max_seq_len
+  # [2] : mask
+  mask_id = [1]*selLen + [0]*(max_seq_len-selLen)
+  # [3] : answer label
+  label_id = label
+
+  return content_id , segment_id , mask_id , label_id
+def makeDataset(data_feature):
+    input_ids = data_feature['input_ids']
+    input_segment_ids = data_feature['input_segment_ids']
+    input_masks = data_feature['input_masks']
+    answer_lables = data_feature['answer_lables']
+
+    all_input_ids = torch.tensor([input_id for input_id in input_ids], dtype=torch.long)
+    all_input_segment_ids = torch.tensor([input_segment_id for input_segment_id in input_segment_ids], dtype=torch.long)
+    all_input_masks = torch.tensor([input_mask for input_mask in input_masks], dtype=torch.long)
+    all_answer_lables = torch.tensor([answer_lable for answer_lable in answer_lables], dtype=torch.long)
+    dataset = TensorDataset(all_input_ids, all_input_segment_ids, all_input_masks, all_answer_lables)
+    return dataset
+	
+bert_config, bert_class, bert_tokenizer = (BertConfig, BertForSequenceClassification, BertTokenizer)
+
+# Set use gpu
+device = torch.device("cuda")
+
+train_dataloader = DataLoader(trainingDataSet ,batch_size=2 ,shuffle=True)
+test_dataloader = DataLoader(testingDataSet ,batch_size=2 ,shuffle=True)
+
+config = bert_config.from_pretrained('bert-base-chinese',num_labels = 2)
+model = bert_class.from_pretrained('bert-base-chinese', from_tf=bool('.ckpt' in 'bert-base-chinese'), config=config)
+model.to(device)
+
+# Prepare optimizer and schedule (linear warmup and decay)
+no_decay = ['bias', 'LayerNorm.weight']
+optimizer_grouped_parameters = [
+    {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)], 'weight_decay': 0.0},
+    {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+    ]
+Learning_rate = 5e-6       # 學習率
+optimizer = AdamW(optimizer_grouped_parameters, lr=Learning_rate, eps=1e-8)
+```	
 ## bert模型預測
     使用已經訓練好bert model,輸入的文章要組成bert的input格式
 ```python
@@ -141,3 +194,4 @@ def getCrimeFlag(testStr):
         "testStr_maskId":testStr_maskId,
         "testStr_labelId":testStr_labelId
     } )
+```	
